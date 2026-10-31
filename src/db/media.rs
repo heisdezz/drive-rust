@@ -222,6 +222,20 @@ pub fn move_media_to_album(
     Ok(moved)
 }
 
+/// Updates both the album ID and current relative path for a media item.
+pub fn update_media_album_and_path(
+    conn: &Connection,
+    item_id: i64,
+    target_album_id: i64,
+    new_relative_path: &str,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE media_items SET album_id = ?1, current_relative_path = ?2 WHERE id = ?3",
+        params![target_album_id, new_relative_path, item_id],
+    )?;
+    Ok(())
+}
+
 /// Deletes media items by their primary keys.
 pub fn delete_media_items(conn: &Connection, media_ids: &[i64]) -> Result<usize> {
     if media_ids.is_empty() {

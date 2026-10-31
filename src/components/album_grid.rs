@@ -44,7 +44,7 @@ pub fn render_album_grid(
             );
     }
 
-    let db = db_opt.unwrap();
+    let db = db_opt.as_ref().unwrap();
 
     // If an album is selected, render Album Detail View
     if let Some(album_id) = selected_album_id {
@@ -239,6 +239,8 @@ pub fn render_album_grid(
                                     let is_selected = selected_ids.contains(&id);
                                     let state_click = app_state.clone();
                                     let state_toggle = app_state.clone();
+                                    let item_clone = item.clone();
+                                    let db_card = db_opt.clone();
 
                                     div()
                                         .w(px(146.0))
@@ -247,8 +249,18 @@ pub fn render_album_grid(
                                             is_selected,
                                             &theme,
                                             move |_, _, cx| {
+                                                let (p_prev, p_next) = if let Some(ref db) = db_card {
+                                                    db.get_media_item_with_neighbors(id, Some(album_id))
+                                                        .ok()
+                                                        .flatten()
+                                                        .map(|(_, p, n)| (p, n))
+                                                        .unwrap_or((None, None))
+                                                } else {
+                                                    (None, None)
+                                                };
+                                                let it = item_clone.clone();
                                                 state_click.update(cx, |s, cx| {
-                                                    s.toggle_media_selection(id);
+                                                    s.open_player(it, p_prev, p_next);
                                                     cx.notify();
                                                 });
                                             },
@@ -278,9 +290,8 @@ pub fn render_album_grid(
         // Top: Gallery Toolbar (+ New Album button + album count)
         .child(
             div()
-                .w_full()
+                .h(px(38.0))
                 .px(px(10.0))
-                .py(px(6.0))
                 .bg(theme.bg_header)
                 .border_1()
                 .border_color(theme.border_subtle)
@@ -292,13 +303,13 @@ pub fn render_album_grid(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(6.0))
+                        .gap(px(8.0))
                         .child(
                             div()
                                 .text_xs()
-                                .font_weight(FontWeight::SEMIBOLD)
+                                .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child("Albums Gallery"),
+                                .child("ALL ALBUMS"),
                         )
                         .child(
                             div()
@@ -309,12 +320,14 @@ pub fn render_album_grid(
                 )
                 .child(
                     div()
-                        .id(SharedString::from("open-create-album-btn"))
+                        .id(SharedString::from("create-album-btn"))
                         .cursor_pointer()
                         .px(px(8.0))
-                        .py(px(3.0))
-                        .rounded(px(3.0))
+                        .py(px(3.5))
+                        .rounded(px(4.0))
                         .bg(theme.accent)
+                        .text_xs()
+                        .font_weight(FontWeight::MEDIUM)
                         .text_color(rgb(0xffffff))
                         .hover(move |s| s.bg(theme.accent_hover))
                         .on_click(move |_, _, cx| {
@@ -323,12 +336,7 @@ pub fn render_album_grid(
                                 cx.notify();
                             });
                         })
-                        .child(
-                            div()
-                                .text_xs()
-                                .font_weight(FontWeight::SEMIBOLD)
-                                .child("+ New Album"),
-                        ),
+                        .child("+ New Album"),
                 ),
         )
         // Center: Grid of Albums

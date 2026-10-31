@@ -112,7 +112,7 @@ pub fn render_media_grid(
                                 div()
                                     .text_xs()
                                     .text_color(theme.text_muted)
-                                    .child("Select a mounted drive from the sidebar to inspect its media library."),
+                                    .child("Select a mounted drive from the sidebar to inspect or catalog media."),
                             )
                     } else if items.is_empty() {
                         div()
@@ -150,6 +150,8 @@ pub fn render_media_grid(
                                 let is_selected = selected_ids.contains(&id);
                                 let state_click = app_state.clone();
                                 let state_toggle = app_state.clone();
+                                let item_clone = item.clone();
+                                let db_card = db_opt.clone();
 
                                 div()
                                     .w(px(146.0))
@@ -158,8 +160,18 @@ pub fn render_media_grid(
                                         is_selected,
                                         &theme,
                                         move |_, _, cx| {
+                                            let (p_prev, p_next) = if let Some(ref db) = db_card {
+                                                db.get_media_item_with_neighbors(id, None)
+                                                    .ok()
+                                                    .flatten()
+                                                    .map(|(_, p, n)| (p, n))
+                                                    .unwrap_or((None, None))
+                                            } else {
+                                                (None, None)
+                                            };
+                                            let it = item_clone.clone();
                                             state_click.update(cx, |s, cx| {
-                                                s.toggle_media_selection(id);
+                                                s.open_player(it, p_prev, p_next);
                                                 cx.notify();
                                             });
                                         },
@@ -186,7 +198,7 @@ pub fn render_media_grid(
                 .flex()
                 .items_center()
                 .justify_between()
-                // Left: Page status & selection info
+                // Left: Page status & selection info & bulk actions
                 .child(
                     div()
                         .flex()
@@ -201,6 +213,13 @@ pub fn render_media_grid(
                         .child(
                             if !selected_ids.is_empty() {
                                 let state_clear = app_state.clone();
+                                let state_move = app_state.clone();
+                                let state_del = app_state.clone();
+                                let db_bulk = db_opt.clone();
+                                let ids_vec = selected_ids.iter().copied().collect::<Vec<_>>();
+                                let ids_for_move = ids_vec.clone();
+                                let ids_for_del = ids_vec.clone();
+
                                 div()
                                     .flex()
                                     .items_center()
@@ -215,6 +234,54 @@ pub fn render_media_grid(
                                             .font_weight(FontWeight::MEDIUM)
                                             .text_color(theme.accent)
                                             .child(format!("{} selected", selected_ids.len())),
+                                    )
+                                    // Move to Album Action
+                                    .child(
+                                        div()
+                                            .id(SharedString::from("bulk-move-btn"))
+                                            .cursor_pointer()
+                                            .px(px(6.0))
+                                            .py(px(1.5))
+                                            .rounded(px(3.0))
+                                            .bg(theme.bg_pill)
+                                            .border_1()
+                                            .border_color(theme.border_card)
+                                            .text_xs()
+                                            .text_color(theme.text_primary)
+                                            .hover(move |s| s.bg(theme.bg_card_hover).border_color(theme.accent))
+                                            .on_click(move |_, _, cx| {
+                                                let ids = ids_for_move.clone();
+                                                state_move.update(cx, |s, cx| {
+                                                    s.open_move_modal(ids);
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child("📁 Move to Album..."),
+                                    )
+                                    // Delete Selected Action
+                                    .child(
+                                        div()
+                                            .id(SharedString::from("bulk-delete-btn"))
+                                            .cursor_pointer()
+                                            .px(px(6.0))
+                                            .py(px(1.5))
+                                            .rounded(px(3.0))
+                                            .bg(theme.bg_pill)
+                                            .border_1()
+                                            .border_color(theme.border_card)
+                                            .text_xs()
+                                            .text_color(theme.accent_danger)
+                                            .hover(move |s| s.bg(theme.accent_danger).text_color(rgb(0xffffff)))
+                                            .on_click(move |_, _, cx| {
+                                                if let Some(ref db) = db_bulk {
+                                                    let _ = db.delete_media_items(&ids_for_del);
+                                                }
+                                                state_del.update(cx, |s, cx| {
+                                                    s.clear_media_selection();
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child("🗑 Delete"),
                                     )
                                     .child(
                                         div()

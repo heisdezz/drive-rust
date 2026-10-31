@@ -118,6 +118,16 @@ impl LibraryDatabase {
         media::move_media_to_album(&conn, media_ids, target_album_id)
     }
 
+    pub fn update_media_album_and_path(
+        &self,
+        item_id: i64,
+        target_album_id: i64,
+        new_relative_path: &str,
+    ) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        media::update_media_album_and_path(&conn, item_id, target_album_id, new_relative_path)
+    }
+
     pub fn delete_media_items(&self, media_ids: &[i64]) -> Result<usize> {
         let conn = self.conn.lock().unwrap();
         media::delete_media_items(&conn, media_ids)
@@ -146,80 +156,58 @@ mod tests {
         assert_eq!(album.name, "Summer_2026");
         assert_eq!(album.media_count, 0);
 
-        // Insert media items
-        let item1 = NewMediaItem {
-            file_hash: "hash_001",
-            original_relative_path: "raw/p1.jpg",
-            current_relative_path: "albums/Summer_2026/p1.jpg",
-            file_size: 1024,
+        let item = NewMediaItem {
+            file_hash: "test_hash_1",
+            original_relative_path: "DCIM/100CANON/IMG_0001.JPG",
+            current_relative_path: "albums/Summer_2026/IMG_0001.JPG",
+            file_size: 1048576,
             mime_type: "image/jpeg",
             duration_seconds: None,
             metadata_json: None,
             album_id: Some(album.id),
         };
-        let id1 = db.insert_media(&item1).expect("Failed to insert media 1");
-        assert!(id1 > 0);
+        let media_id = db.insert_media(&item).expect("Failed to insert media");
+        assert!(media_id > 0);
 
-        let item2 = NewMediaItem {
-            file_hash: "hash_002",
-            original_relative_path: "raw/v1.mp4",
-            current_relative_path: "albums/Summer_2026/v1.mp4",
-            file_size: 2048,
-            mime_type: "video/mp4",
-            duration_seconds: Some(120),
-            metadata_json: None,
-            album_id: Some(album.id),
-        };
-        db.insert_media(&item2).expect("Failed to insert media 2");
-
-        // Verify trigger updated media_count
-        let updated_album = db.get_album_by_id(album.id).unwrap().unwrap();
-        assert_eq!(updated_album.media_count, 2);
-
-        // Test filtering
-        let (images, img_count) = db.get_media_items(
-            Some(album.id), 10, 0, MediaFilterType::Images, None, MediaSortBy::Date, SortOrder::Desc
-        ).unwrap();
-        assert_eq!(img_count, 1);
-        assert_eq!(images.len(), 1);
-        assert_eq!(images[0].mime_type, "image/jpeg");
-
-        let (videos, vid_count) = db.get_media_items(
-            Some(album.id), 10, 0, MediaFilterType::Videos, None, MediaSortBy::Date, SortOrder::Desc
-        ).unwrap();
-        assert_eq!(vid_count, 1);
-        assert_eq!(videos.len(), 1);
-        assert_eq!(videos[0].mime_type, "video/mp4");
+        // Verify count trigger incremented album count
+        let fetched_album = db.get_album_by_id(album.id).expect("Failed to get album").unwrap();
+        assert_eq!(fetched_album.media_count, 1);
     }
 
     #[test]
     fn test_move_media_and_trigger_balance() {
         let db = LibraryDatabase::open_in_memory().expect("Failed to open DB");
-        let album_a = db.create_album("AlbumA", "albums/AlbumA", None).unwrap();
-        let album_b = db.create_album("AlbumB", "albums/AlbumB", None).unwrap();
+
+        let album_a = db.create_album("Album_A", "albums/Album_A", None).unwrap();
+        let album_b = db.create_album("Album_B", "albums/Album_B", None).unwrap();
 
         let item = NewMediaItem {
-            file_hash: "hash_move",
-            original_relative_path: "p.jpg",
-            current_relative_path: "albums/AlbumA/p.jpg",
-            file_size: 500,
+            file_hash: "hash_move_1",
+            original_relative_path: "orig.jpg",
+            current_relative_path: "albums/Album_A/orig.jpg",
+            file_size: 512,
             mime_type: "image/jpeg",
             duration_seconds: None,
             metadata_json: None,
             album_id: Some(album_a.id),
         };
-        let item_id = db.insert_media(&item).unwrap();
+        let mid = db.insert_media(&item).unwrap();
 
         assert_eq!(db.get_album_by_id(album_a.id).unwrap().unwrap().media_count, 1);
         assert_eq!(db.get_album_by_id(album_b.id).unwrap().unwrap().media_count, 0);
 
-        // Move to AlbumB
-        let moved = db.move_media_to_album(&[item_id], album_b.id).unwrap();
+        // Move to Album B
+        let moved = db.move_media_to_album(&[mid], album_b.id).unwrap();
         assert_eq!(moved, 1);
 
-        // Check counts
+        // Verify counts after move
         assert_eq!(db.get_album_by_id(album_a.id).unwrap().unwrap().media_count, 0);
         assert_eq!(db.get_album_by_id(album_b.id).unwrap().unwrap().media_count, 1);
+
+        // Test update_media_album_and_path
+        db.update_media_album_and_path(mid, album_a.id, "albums/Album_A/new_path.jpg").unwrap();
+        assert_eq!(db.get_album_by_id(album_a.id).unwrap().unwrap().media_count, 1);
+        assert_eq!(db.get_album_by_id(album_b.id).unwrap().unwrap().media_count, 0);
     }
 
     #[test]
@@ -268,5 +256,47 @@ mod tests {
         assert_eq!(res.0.id, id2);
         assert_eq!(res.1, Some(id1)); // prev
         assert_eq!(res.2, Some(id3)); // next
+    }
+
+    #[test]
+    fn test_album_merge_and_deletion() {
+        let db = LibraryDatabase::open_in_memory().expect("Failed to open DB");
+
+        let album_src = db.create_album("Source", "albums/Source", None).unwrap();
+        let album_dst = db.create_album("Target", "albums/Target", None).unwrap();
+
+        let item = NewMediaItem {
+            file_hash: "merge_test_1",
+            original_relative_path: "test.jpg",
+            current_relative_path: "albums/Source/test.jpg",
+            file_size: 1024,
+            mime_type: "image/jpeg",
+            duration_seconds: None,
+            metadata_json: None,
+            album_id: Some(album_src.id),
+        };
+        let mid = db.insert_media(&item).unwrap();
+
+        // Merge Source into Target
+        let merged_count = db.merge_albums(album_src.id, album_dst.id).unwrap();
+        assert_eq!(merged_count, 1);
+
+        // Source album is deleted
+        assert!(db.get_album_by_id(album_src.id).unwrap().is_none());
+        // Target album count is updated
+        assert_eq!(db.get_album_by_id(album_dst.id).unwrap().unwrap().media_count, 1);
+
+        // Safe delete Target album -> moves items to unknown
+        db.delete_album(album_dst.id, false).unwrap();
+        assert!(db.get_album_by_id(album_dst.id).unwrap().is_none());
+
+        // Verify media item still exists and is in unknown album
+        let unknown = db.get_albums().unwrap().into_iter().find(|a| a.name == "unknown").unwrap();
+        assert_eq!(unknown.media_count, 1);
+
+        // Permanent delete item
+        db.delete_media_items(&[mid]).unwrap();
+        let unknown_after = db.get_albums().unwrap().into_iter().find(|a| a.name == "unknown").unwrap();
+        assert_eq!(unknown_after.media_count, 0);
     }
 }

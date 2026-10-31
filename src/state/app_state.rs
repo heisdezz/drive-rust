@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
-use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, ScanProgress, SortOrder};
+use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, MediaItem, ScanProgress, SortOrder};
 use crate::theme::{AppTheme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -65,6 +65,18 @@ pub struct AppState {
     pub media_page: usize,
     pub media_page_size: usize,
     pub selected_media_ids: HashSet<i64>,
+
+    // Media Player Viewer State
+    pub viewing_media_item: Option<MediaItem>,
+    pub player_prev_id: Option<i64>,
+    pub player_next_id: Option<i64>,
+    pub player_show_metadata: bool,
+
+    // Advanced Modals
+    pub moving_media_ids: Vec<i64>,
+    pub merging_album: Option<Album>,
+    pub deleting_album: Option<Album>,
+    pub delete_album_permanent: bool,
 }
 
 impl AppState {
@@ -97,6 +109,16 @@ impl AppState {
             media_page: 1,
             media_page_size: 24,
             selected_media_ids: HashSet::new(),
+
+            viewing_media_item: None,
+            player_prev_id: None,
+            player_next_id: None,
+            player_show_metadata: true,
+
+            moving_media_ids: Vec::new(),
+            merging_album: None,
+            deleting_album: None,
+            delete_album_permanent: false,
         }
     }
 
@@ -134,6 +156,56 @@ impl AppState {
         self.editing_album = None;
     }
 
+    // Media Player actions
+    pub fn open_player(&mut self, item: MediaItem, prev_id: Option<i64>, next_id: Option<i64>) {
+        self.viewing_media_item = Some(item);
+        self.player_prev_id = prev_id;
+        self.player_next_id = next_id;
+        self.player_show_metadata = true;
+    }
+
+    pub fn close_player(&mut self) {
+        self.viewing_media_item = None;
+        self.player_prev_id = None;
+        self.player_next_id = None;
+    }
+
+    pub fn toggle_player_metadata(&mut self) {
+        self.player_show_metadata = !self.player_show_metadata;
+    }
+
+    // Move to album modal actions
+    pub fn open_move_modal(&mut self, ids: Vec<i64>) {
+        self.moving_media_ids = ids;
+    }
+
+    pub fn close_move_modal(&mut self) {
+        self.moving_media_ids.clear();
+    }
+
+    // Merge album modal actions
+    pub fn open_merge_modal(&mut self, album: Album) {
+        self.merging_album = Some(album);
+    }
+
+    pub fn close_merge_modal(&mut self) {
+        self.merging_album = None;
+    }
+
+    // Delete album modal actions
+    pub fn open_delete_modal(&mut self, album: Album) {
+        self.deleting_album = Some(album);
+        self.delete_album_permanent = false;
+    }
+
+    pub fn close_delete_modal(&mut self) {
+        self.deleting_album = None;
+    }
+
+    pub fn set_delete_permanent(&mut self, permanent: bool) {
+        self.delete_album_permanent = permanent;
+    }
+
     // Scanner actions
     pub fn add_ignore_pattern(&mut self, pattern: &str) {
         let trimmed = pattern.trim().to_lowercase();
@@ -155,7 +227,6 @@ impl AppState {
     }
 
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
-        // If current selected drive was removed or none selected, pick the first drive
         if let Some(selected) = &self.selected_drive {
             if !drives.iter().any(|d| d.id == selected.id) {
                 self.selected_drive = drives.first().cloned();
@@ -278,5 +349,42 @@ mod tests {
 
         state.remove_ignore_pattern("temp");
         assert!(!state.user_ignore_patterns.contains(&"temp".to_string()));
+    }
+
+    #[test]
+    fn test_player_and_modal_state_management() {
+        let mut state = AppState::new();
+        assert!(state.viewing_media_item.is_none());
+
+        let item = MediaItem {
+            id: 10,
+            file_hash: "hash123".to_string(),
+            original_relative_path: "DCIM/img.jpg".to_string(),
+            current_relative_path: "albums/unknown/img.jpg".to_string(),
+            file_size: 2048,
+            mime_type: "image/jpeg".to_string(),
+            duration_seconds: None,
+            metadata_json: None,
+            album_id: Some(1),
+            created_at: "2026-10-31 12:00:00".to_string(),
+        };
+
+        state.open_player(item.clone(), Some(9), Some(11));
+        assert_eq!(state.viewing_media_item.as_ref().map(|i| i.id), Some(10));
+        assert_eq!(state.player_prev_id, Some(9));
+        assert_eq!(state.player_next_id, Some(11));
+        assert!(state.player_show_metadata);
+
+        state.toggle_player_metadata();
+        assert!(!state.player_show_metadata);
+
+        state.close_player();
+        assert!(state.viewing_media_item.is_none());
+
+        // Test move modal
+        state.open_move_modal(vec![10, 11, 12]);
+        assert_eq!(state.moving_media_ids.len(), 3);
+        state.close_move_modal();
+        assert!(state.moving_media_ids.is_empty());
     }
 }

@@ -3,8 +3,13 @@ use crate::state::app_state::{AppRoute, AppState};
 use crate::components::sidebar::render_sidebar;
 use crate::components::media_grid::render_media_grid;
 use crate::components::album_grid::render_album_grid;
-use crate::components::album_modal::{render_create_album_modal, render_edit_album_modal};
+use crate::components::album_modal::{
+    render_create_album_modal, render_delete_album_modal, render_edit_album_modal,
+    render_merge_album_modal,
+};
 use crate::components::discover_view::render_discover_view;
+use crate::components::media_player::render_media_player_modal;
+use crate::components::move_modal::render_move_to_album_modal;
 use crate::components::theme_picker::render_theme_picker;
 
 pub struct AppView {
@@ -31,6 +36,10 @@ impl Render for AppView {
         let theme = state.theme;
         let show_create_album = state.show_create_album_modal;
         let show_edit_album = state.editing_album.is_some();
+        let show_merge_album = state.merging_album.is_some();
+        let show_delete_album = state.deleting_album.is_some();
+        let show_move_modal = !state.moving_media_ids.is_empty();
+        let show_media_player = state.viewing_media_item.is_some();
 
         let state_theme = self.app_state.clone();
 
@@ -71,24 +80,30 @@ impl Render for AppView {
                                     .child(
                                         div()
                                             .text_xs()
-                                            .font_weight(FontWeight::SEMIBOLD)
-                                            .text_color(theme.text_primary)
-                                            .child(active_route.title()),
+                                            .font_weight(FontWeight::NORMAL)
+                                            .text_color(theme.text_muted)
+                                            .child(
+                                                selected_drive
+                                                    .as_ref()
+                                                    .map(|d| d.name.clone())
+                                                    .unwrap_or_else(|| "No Drive".to_string()),
+                                            ),
                                     )
                                     .child(
                                         div()
                                             .text_xs()
-                                            .text_color(theme.text_muted)
+                                            .text_color(theme.border_card)
                                             .child("/"),
                                     )
                                     .child(
                                         div()
                                             .text_xs()
-                                            .text_color(theme.text_secondary)
-                                            .child(active_route.path_str()),
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .text_color(theme.text_primary)
+                                            .child(active_route.title()),
                                     ),
                             )
-                            // Right Header: Quick Theme Switcher + DB status indicator
+                            // Right: Theme Mode Quick Toggle & Status Indicators
                             .child(
                                 div()
                                     .flex()
@@ -97,11 +112,11 @@ impl Render for AppView {
                                     // Quick Theme Cycle Button
                                     .child(
                                         div()
-                                            .id(SharedString::from("header-theme-switcher"))
+                                            .id(SharedString::from("quick-theme-toggle-btn"))
                                             .cursor_pointer()
                                             .flex()
                                             .items_center()
-                                            .gap(px(5.0))
+                                            .gap(px(4.0))
                                             .px(px(7.0))
                                             .py(px(2.0))
                                             .rounded(px(4.0))
@@ -159,27 +174,40 @@ impl Render for AppView {
                                                     .child(if db_connected {
                                                         "SQLite Ready"
                                                     } else {
-                                                        "No DB Mounted"
+                                                        "Drive Disconnected"
                                                     }),
                                             ),
                                     )
-                                    // GPUI Native Badge
+                                    // Compact System Status Dot
                                     .child(
                                         div()
+                                            .flex()
+                                            .items_center()
+                                            .gap(px(5.0))
                                             .px(px(6.0))
                                             .py(px(2.0))
                                             .rounded(px(4.0))
-                                            .bg(theme.bg_pill_active)
+                                            .bg(theme.bg_pill)
                                             .border_1()
-                                            .border_color(theme.border_active)
-                                            .text_xs()
-                                            .text_color(theme.accent)
-                                            .font_weight(FontWeight::MEDIUM)
-                                            .child("GPUI Native"),
+                                            .border_color(theme.border_card)
+                                            .child(
+                                                div()
+                                                    .w(px(5.0))
+                                                    .h(px(5.0))
+                                                    .rounded(px(2.5))
+                                                    .bg(theme.accent),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::NORMAL)
+                                                    .text_color(theme.text_muted)
+                                                    .child("Native GPUI"),
+                                            ),
                                     ),
                             ),
                     )
-                    // View Content Area
+                    // View Route Canvas (Compact padding)
                     .child(
                         div()
                             .flex_grow(1.0)
@@ -188,7 +216,7 @@ impl Render for AppView {
                             .child(render_route_content(&self.app_state, active_route, selected_drive.as_ref(), window, cx)),
                     ),
             )
-            // Modals
+            // Modals & Viewer Overlay Layer
             .child(
                 if show_create_album {
                     div().child(render_create_album_modal(&self.app_state, window, cx))
@@ -199,6 +227,34 @@ impl Render for AppView {
             .child(
                 if show_edit_album {
                     div().child(render_edit_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
+            .child(
+                if show_merge_album {
+                    div().child(render_merge_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
+            .child(
+                if show_delete_album {
+                    div().child(render_delete_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
+            .child(
+                if show_move_modal {
+                    div().child(render_move_to_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
+            .child(
+                if show_media_player {
+                    div().child(render_media_player_modal(&self.app_state, window, cx))
                 } else {
                     div()
                 },
@@ -260,7 +316,7 @@ fn render_route_content(
         _ => div()
             .flex()
             .flex_col()
-            .gap(px(10.0))
+            .gap(px(14.0))
             .child(
                 div()
                     .p(px(14.0))
@@ -273,65 +329,94 @@ fn render_route_content(
                             .text_sm()
                             .font_weight(FontWeight::SEMIBOLD)
                             .text_color(theme.text_primary)
-                            .child(format!("{} View", route.title())),
+                            .child(format!("Welcome to {}", route.title())),
                     )
                     .child(
                         div()
                             .mt(px(4.0))
                             .text_xs()
-                            .text_color(theme.text_muted)
-                            .child(match route {
-                                AppRoute::Dashboard => "Welcome to Rust Drive. Select an external storage drive from the sidebar to inspect or organize its media library.",
-                                AppRoute::Discover => "",
-                                AppRoute::Medias => "Browse, filter, and search media files indexed on the active external drive.",
-                                AppRoute::Albums => "Manage physical album directories, view media counts, and merge or edit albums.",
-                                AppRoute::Settings => "",
-                                AppRoute::About => "Native Rust port powered by GPUI and GPUI-Kit with direct SQLite storage.",
-                            }),
+                            .text_color(theme.text_secondary)
+                            .child(
+                                if let Some(drive) = selected_drive {
+                                    format!("Active Storage Volume: {} ({:?}) mounted at {}", drive.name, drive.drive_type, drive.mount_path.display())
+                                } else {
+                                    "No removable storage drive selected. Connect a drive or select one from the sidebar.".to_string()
+                                }
+                            ),
+                    ),
+            )
+            .child(
+                div()
+                    .flex()
+                    .gap(px(10.0))
+                    .child(
+                        div()
+                            .flex_1()
+                            .p(px(12.0))
+                            .rounded(px(6.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(theme.text_muted)
+                                    .child("PORT STATUS"),
+                            )
+                            .child(
+                                div()
+                                    .mt(px(4.0))
+                                    .text_xs()
+                                    .text_color(theme.accent_success)
+                                    .child("100% Native Rust & GPUI (No WebKit/V8)"),
+                            ),
                     )
                     .child(
-                        if let Some(drive) = selected_drive {
-                            div()
-                                .mt(px(12.0))
-                                .p(px(10.0))
-                                .rounded(px(5.0))
-                                .bg(theme.bg_pill)
-                                .border_1()
-                                .border_color(theme.border_card)
-                                .flex()
-                                .flex_col()
-                                .gap(px(3.0))
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .font_weight(FontWeight::SEMIBOLD)
-                                        .text_color(theme.accent)
-                                        .child(format!("Selected Drive: {}", drive.name)),
-                                )
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.text_secondary)
-                                        .child(format!("Mount Path: {}", drive.mount_path.display())),
-                                )
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.text_secondary)
-                                        .child(format!("Capacity: {} ({}% used)", drive.size_formatted, drive.used_percentage)),
-                                )
-                        } else {
-                            div()
-                                .mt(px(12.0))
-                                .p(px(10.0))
-                                .rounded(px(5.0))
-                                .bg(theme.bg_pill)
-                                .border_1()
-                                .border_color(theme.border_card)
-                                .text_xs()
-                                .text_color(theme.accent_warning)
-                                .child("⚠️ No external drive selected. Connect a USB drive or select one from the sidebar.")
-                        },
+                        div()
+                            .flex_1()
+                            .p(px(12.0))
+                            .rounded(px(6.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(theme.text_muted)
+                                    .child("DATABASE ENGINE"),
+                            )
+                            .child(
+                                div()
+                                    .mt(px(4.0))
+                                    .text_xs()
+                                    .text_color(theme.text_secondary)
+                                    .child("SQLite 3 with WAL & Direct Triggers"),
+                            ),
+                    )
+                    .child(
+                        div()
+                            .flex_1()
+                            .p(px(12.0))
+                            .rounded(px(6.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
+                            .child(
+                                div()
+                                    .text_xs()
+                                    .font_weight(FontWeight::MEDIUM)
+                                    .text_color(theme.text_muted)
+                                    .child("ACTIVE THEME"),
+                            )
+                            .child(
+                                div()
+                                    .mt(px(4.0))
+                                    .text_xs()
+                                    .text_color(theme.accent)
+                                    .child(format!("{} {}", theme.mode.icon(), theme.name())),
+                            ),
                     ),
             ),
     }

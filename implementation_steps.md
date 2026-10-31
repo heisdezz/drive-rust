@@ -69,18 +69,20 @@ Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using
 
 ---
 
-### Phase 9: Component 5: Media Player & Advanced Dialogs (Next)
+### Phase 9: Component 5: Media Player & Advanced Dialogs ✅
 
-- [ ] **Step 9.1: Build `MediaPlayerModal`**
-  - Full-screen high-res preview, arrow key seek navigation (`Prev` / `Next`), zoom/fit controls, and EXIF metadata drawer.
-- [ ] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
-  - Searchable destination album picker, atomic file moves, database record updates.
-- [ ] **Step 9.3: Build `DeleteAlbumModal`**
-  - Confirmation dialog with option to keep files in Unsorted vs permanent delete.
+- [x] **Step 9.1: Build `MediaPlayerModal`**
+  - Implemented `src/components/media_player.rs` with compact Zed 38px titlebar, full-screen overlay, sequential neighbor navigation (`◀ Prev` / `▶ Next`), interactive video playback canvas with timeline seeker, and collapsible EXIF metadata drawer (`ℹ Info`).
+  - Integrated with `db.get_media_item_with_neighbors` for album-scoped or global slideshow navigation.
+- [x] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
+  - Implemented `src/components/move_modal.rs` (`render_move_to_album_modal`) for single/bulk media relocation with disk atomic moves (`resolve_collision`) and database record synchronization.
+  - Implemented `render_merge_album_modal` in `src/components/album_modal.rs` for merging all contents of one album directory into another.
+- [x] **Step 9.3: Build `DeleteAlbumModal`**
+  - Implemented `render_delete_album_modal` in `src/components/album_modal.rs` with explicit radio selection between Safe Preservation (reassigning files to `unknown` album without deleting from disk) and Permanent Deletion (removing physical files and database records).
 
 ---
 
-### Phase 10: End-to-End Polish & Verification
+### Phase 10: End-to-End Polish & Verification (Next)
 
 - [ ] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
 - [ ] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, snapshot recovery from `.backups/`).
