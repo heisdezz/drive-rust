@@ -28,8 +28,8 @@ impl Render for AppView {
             .flex()
             .w_full()
             .h_full()
-            .bg(rgb(0x020617)) // Slate-950 main canvas
-            .text_color(rgb(0xf8fafc))
+            .bg(rgb(0x15171c)) // Zed dark canvas background
+            .text_color(rgb(0xd4d4d8))
             // Left: Navigation & Drives Sidebar
             .child(render_sidebar(&self.app_state, window, cx))
             // Right: Main App Canvas
@@ -40,40 +40,39 @@ impl Render for AppView {
                     .flex_grow(1.0)
                     .h_full()
                     .overflow_hidden()
-                    // Top App Header & Breadcrumbs
+                    // Top App Header & Breadcrumbs (Zed 38px titlebar height)
                     .child(
                         div()
-                            .h(px(64.0))
-                            .px(px(24.0))
+                            .h(px(38.0))
+                            .px(px(14.0))
                             .flex()
                             .items_center()
                             .justify_between()
-                            .bg(rgb(0x0b0f19))
+                            .bg(rgb(0x131519))
                             .border_b_1()
-                            .border_color(rgb(0x1e293b))
+                            .border_color(rgb(0x1e2025))
                             .child(
                                 div()
                                     .flex()
                                     .items_center()
-                                    .gap(px(8.0))
+                                    .gap(px(6.0))
                                     .child(
                                         div()
-                                            .text_sm()
-                                            .font_weight(FontWeight::BOLD)
-                                            .text_color(rgb(0xf8fafc))
+                                            .text_xs()
+                                            .font_weight(FontWeight::SEMIBOLD)
+                                            .text_color(rgb(0xf4f4f5))
                                             .child(active_route.title()),
                                     )
                                     .child(
                                         div()
                                             .text_xs()
-                                            .text_color(rgb(0x64748b))
+                                            .text_color(rgb(0x52525b))
                                             .child("/"),
                                     )
                                     .child(
                                         div()
                                             .text_xs()
-                                            .font_weight(FontWeight::MEDIUM)
-                                            .text_color(rgb(0x64748b))
+                                            .text_color(rgb(0x71717a))
                                             .child(active_route.path_str()),
                                     ),
                             )
@@ -82,23 +81,25 @@ impl Render for AppView {
                                 div()
                                     .flex()
                                     .items_center()
-                                    .gap(px(12.0))
+                                    .gap(px(8.0))
                                     .child(
                                         div()
                                             .flex()
                                             .items_center()
-                                            .gap(px(6.0))
-                                            .px(px(8.0))
-                                            .py(px(3.0))
-                                            .rounded(px(12.0))
-                                            .bg(rgb(0x1e293b))
+                                            .gap(px(5.0))
+                                            .px(px(6.0))
+                                            .py(px(2.0))
+                                            .rounded(px(4.0))
+                                            .bg(rgb(0x1c1e24))
+                                            .border_1()
+                                            .border_color(rgb(0x272a31))
                                             .child(
                                                 div()
-                                                    .w(px(6.0))
-                                                    .h(px(6.0))
-                                                    .rounded(px(3.0))
+                                                    .w(px(5.0))
+                                                    .h(px(5.0))
+                                                    .rounded(px(2.5))
                                                     .bg(if db_connected {
-                                                        rgb(0x10b981) // Green
+                                                        rgb(0x10b981) // Emerald
                                                     } else {
                                                         rgb(0xf59e0b) // Amber
                                                     }),
@@ -106,8 +107,8 @@ impl Render for AppView {
                                             .child(
                                                 div()
                                                     .text_xs()
-                                                    .font_weight(FontWeight::MEDIUM)
-                                                    .text_color(rgb(0x94a3b8))
+                                                    .font_weight(FontWeight::NORMAL)
+                                                    .text_color(rgb(0xa1a1aa))
                                                     .child(if db_connected {
                                                         "SQLite Ready"
                                                     } else {
@@ -117,13 +118,15 @@ impl Render for AppView {
                                     )
                                     .child(
                                         div()
-                                            .px(px(8.0))
-                                            .py(px(3.0))
+                                            .px(px(6.0))
+                                            .py(px(2.0))
                                             .rounded(px(4.0))
-                                            .bg(rgb(0x1e293b))
+                                            .bg(rgb(0x1e2433))
+                                            .border_1()
+                                            .border_color(rgb(0x283548))
                                             .text_xs()
                                             .text_color(rgb(0x60a5fa))
-                                            .font_weight(FontWeight::BOLD)
+                                            .font_weight(FontWeight::MEDIUM)
                                             .child("GPUI Native"),
                                     ),
                             ),
@@ -132,7 +135,7 @@ impl Render for AppView {
                     .child(
                         div()
                             .flex_grow(1.0)
-                            .p(px(24.0))
+                            .p(px(14.0))
                             .overflow_y_hidden()
                             .child(render_route_content(active_route, selected_drive.as_ref())),
                     ),
@@ -145,26 +148,26 @@ fn render_route_content(route: AppRoute, selected_drive: Option<&crate::state::m
     div()
         .flex()
         .flex_col()
-        .gap(px(16.0))
+        .gap(px(10.0))
         .child(
             div()
-                .p(px(20.0))
-                .rounded(px(12.0))
-                .bg(rgb(0x0f172a))
+                .p(px(14.0))
+                .rounded(px(6.0))
+                .bg(rgb(0x181a20))
                 .border_1()
-                .border_color(rgb(0x1e293b))
+                .border_color(rgb(0x23262d))
                 .child(
                     div()
-                        .text_lg()
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(rgb(0xf8fafc))
+                        .text_sm()
+                        .font_weight(FontWeight::SEMIBOLD)
+                        .text_color(rgb(0xf4f4f5))
                         .child(format!("{} View", route.title())),
                 )
                 .child(
                     div()
-                        .mt(px(6.0))
+                        .mt(px(4.0))
                         .text_xs()
-                        .text_color(rgb(0x94a3b8))
+                        .text_color(rgb(0x8e8e93))
                         .child(match route {
                             AppRoute::Dashboard => "Welcome to Rust Drive. Select an external storage drive from the sidebar to inspect or organize its media library.",
                             AppRoute::Discover => "Scan storage drives, configure folder ignore patterns, and auto-catalog media files into albums.",
@@ -177,37 +180,44 @@ fn render_route_content(route: AppRoute, selected_drive: Option<&crate::state::m
                 .child(
                     if let Some(drive) = selected_drive {
                         div()
-                            .mt(px(16.0))
-                            .p(px(12.0))
-                            .rounded(px(8.0))
-                            .bg(rgb(0x1e293b))
+                            .mt(px(12.0))
+                            .p(px(10.0))
+                            .rounded(px(5.0))
+                            .bg(rgb(0x1c1e24))
+                            .border_1()
+                            .border_color(rgb(0x272a31))
                             .flex()
                             .flex_col()
-                            .gap(px(4.0))
+                            .gap(px(3.0))
                             .child(
                                 div()
                                     .text_xs()
-                                    .font_weight(FontWeight::BOLD)
+                                    .font_weight(FontWeight::SEMIBOLD)
                                     .text_color(rgb(0x60a5fa))
                                     .child(format!("Selected Drive: {}", drive.name)),
                             )
                             .child(
                                 div()
                                     .text_xs()
-                                    .text_color(rgb(0x94a3b8))
+                                    .text_color(rgb(0xa1a1aa))
                                     .child(format!("Mount Path: {}", drive.mount_path.display())),
                             )
                             .child(
                                 div()
                                     .text_xs()
-                                    .text_color(rgb(0x94a3b8))
+                                    .text_color(rgb(0xa1a1aa))
                                     .child(format!("Capacity: {} ({}% used)", drive.size_formatted, drive.used_percentage)),
                             )
                     } else {
                         div()
-                            .mt(px(16.0))
+                            .mt(px(12.0))
+                            .p(px(10.0))
+                            .rounded(px(5.0))
+                            .bg(rgb(0x1c1e24))
+                            .border_1()
+                            .border_color(rgb(0x272a31))
                             .text_xs()
-                            .text_color(rgb(0xf59e0b))
+                            .text_color(rgb(0xfbbf24))
                             .child("⚠️ No external drive selected. Connect a USB drive or select one from the sidebar.")
                     },
                 ),

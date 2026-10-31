@@ -5,6 +5,13 @@ edition = "2021"
 
 [dependencies]
 gpui-kit = "0.8.1"
+gpui-navigator = { version = "0.2.1", default-features = false, features = [
+    "gpui-pre",
+    "transition",
+    "guard",
+    "middleware",
+    "cache",
+] }
 rusqlite = { version = "0.32", features = ["bundled"] }
 sysinfo = "0.33"
 image = { version = "0.25", default-features = false, features = [

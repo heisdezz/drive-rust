@@ -2126,6 +2126,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpui-navigator"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dbe408290233edf52effbd0906974c375b01e1e8e679cded22b2f3a18e7102a"
+dependencies = [
+ "gpui-pre",
+ "lru",
+]
+
+[[package]]
 name = "gpui-pre"
 version = "0.3.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3455,6 +3465,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fae87c125b03c1d2c0150c90365d7d6bcc53fb73a9acaef207d2d065860f062"
 dependencies = [
  "imgref",
+]
+
+[[package]]
+name = "lru"
+version = "0.16.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f66e8d5d03f609abc3a39e6f08e4164ebf1447a732906d39eb9b99b7919ef39"
+dependencies = [
+ "hashbrown 0.16.1",
 ]
 
 [[package]]
@@ -5317,6 +5336,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "gpui-kit",
+ "gpui-navigator",
  "image",
  "rusqlite",
  "serde",
