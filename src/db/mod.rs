@@ -132,6 +132,26 @@ impl LibraryDatabase {
         let conn = self.conn.lock().unwrap();
         media::delete_media_items(&conn, media_ids)
     }
+
+    pub fn get_or_create_album(&self, name: &str, relative_path: &str) -> Result<Album> {
+        let conn = self.conn.lock().unwrap();
+        albums::get_or_create_album(&conn, name, relative_path)
+    }
+
+    pub fn recalculate_all_album_counts(&self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        albums::recalculate_all_album_counts(&conn)
+    }
+
+    pub fn get_all_media_for_audit(&self) -> Result<Vec<(i64, String)>> {
+        let conn = self.conn.lock().unwrap();
+        media::get_all_media_for_audit(&conn)
+    }
+
+    pub fn media_exists_by_path(&self, path: &str) -> Result<bool> {
+        let conn = self.conn.lock().unwrap();
+        media::media_exists_by_path(&conn, path)
+    }
 }
 
 #[cfg(test)]

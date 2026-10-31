@@ -251,3 +251,24 @@ pub fn delete_media_items(conn: &Connection, media_ids: &[i64]) -> Result<usize>
 
     Ok(deleted)
 }
+
+/// Retrieves (id, current_relative_path) pairs for all registered media items for filesystem audit.
+pub fn get_all_media_for_audit(conn: &Connection) -> Result<Vec<(i64, String)>> {
+    let mut stmt = conn.prepare("SELECT id, current_relative_path FROM media_items")?;
+    let rows = stmt.query_map([], |row| {
+        Ok((row.get(0)?, row.get(1)?))
+    })?;
+
+    let mut result = Vec::new();
+    for row in rows {
+        result.push(row?);
+    }
+    Ok(result)
+}
+
+/// Checks whether a media item already exists with the given relative path.
+pub fn media_exists_by_path(conn: &Connection, path: &str) -> Result<bool> {
+    let mut stmt = conn.prepare("SELECT 1 FROM media_items WHERE current_relative_path = ?1 LIMIT 1")?;
+    let exists = stmt.exists(params![path])?;
+    Ok(exists)
+}

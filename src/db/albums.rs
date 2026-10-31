@@ -19,6 +19,44 @@ pub fn create_album(
     })
 }
 
+/// Retrieves an existing album by name or creates it if not found.
+pub fn get_or_create_album(
+    conn: &Connection,
+    name: &str,
+    relative_path: &str,
+) -> Result<Album> {
+    let existing: Option<Album> = conn.query_row(
+        "SELECT id, name, relative_path, description, media_count, created_at FROM albums WHERE name = ?1",
+        params![name],
+        |row| {
+            Ok(Album {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                relative_path: row.get(2)?,
+                description: row.get(3)?,
+                media_count: row.get(4)?,
+                created_at: row.get(5)?,
+                preview_item: None,
+            })
+        },
+    ).optional()?;
+
+    if let Some(album) = existing {
+        Ok(album)
+    } else {
+        create_album(conn, name, relative_path, None)
+    }
+}
+
+/// Recalculates and synchronizes `media_count` for all albums based on current `media_items`.
+pub fn recalculate_all_album_counts(conn: &Connection) -> Result<()> {
+    conn.execute(
+        "UPDATE albums SET media_count = (SELECT COUNT(*) FROM media_items WHERE media_items.album_id = albums.id)",
+        [],
+    )?;
+    Ok(())
+}
+
 /// Retrieves a single album by its ID.
 pub fn get_album_by_id(conn: &Connection, album_id: i64) -> Result<Option<Album>> {
     let mut stmt = conn.prepare(

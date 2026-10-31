@@ -7,6 +7,7 @@ pub mod scanner;
 pub mod components;
 pub mod theme;
 pub mod app;
+pub mod thumbnails;
 
 use std::time::Duration;
 use gpui_kit::*;

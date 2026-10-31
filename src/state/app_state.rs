@@ -91,6 +91,7 @@ pub struct AppState {
     pub grid_columns: usize,
     pub show_video_test_modal: bool,
     pub test_video_url: String,
+    pub last_audit_report: Option<crate::scanner::audit::LibraryAuditReport>,
 }
 
 impl AppState {
@@ -142,6 +143,7 @@ impl AppState {
             grid_columns: 6,
             show_video_test_modal: false,
             test_video_url: "/run/media/destiny/Ventoy/sample.mp4".to_string(),
+            last_audit_report: None,
         }
     }
 
@@ -189,12 +191,14 @@ impl AppState {
 
     // Media Player actions
     pub fn open_player(&mut self, item: MediaItem, prev_id: Option<i64>, next_id: Option<i64>) {
+        crate::thumbnails::generator::set_playback_active(true);
         self.viewing_media_item = Some(item);
         self.player_prev_id = prev_id;
         self.player_next_id = next_id;
     }
 
     pub fn close_player(&mut self) {
+        crate::thumbnails::generator::set_playback_active(false);
         self.viewing_media_item = None;
         self.player_prev_id = None;
         self.player_next_id = None;
@@ -371,6 +375,21 @@ impl AppState {
 
     pub fn set_test_video_url(&mut self, url: String) {
         self.test_video_url = url;
+    }
+
+    pub fn rescan_and_audit(&mut self) -> Option<crate::scanner::audit::LibraryAuditReport> {
+        let db = self.active_db.clone()?;
+        let mount_path = self.selected_drive.as_ref()?.mount_path.clone();
+        match crate::scanner::audit::audit_and_reconcile(&mount_path, &db) {
+            Ok(report) => {
+                self.last_audit_report = Some(report.clone());
+                Some(report)
+            }
+            Err(err) => {
+                eprintln!("Error during library audit: {}", err);
+                None
+            }
+        }
     }
 
     pub fn set_route(&mut self, route: AppRoute) {
