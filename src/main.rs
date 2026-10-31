@@ -4,6 +4,7 @@ pub mod state;
 pub mod db;
 pub mod drives;
 pub mod components;
+pub mod theme;
 pub mod app;
 
 use std::time::Duration;

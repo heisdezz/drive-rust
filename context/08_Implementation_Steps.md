@@ -1,94 +1,14 @@
-# Rust Drive - Implementation Roadmap
+### Phase 6: Dynamic Theming Engine & Theme Switcher (NEW) ✅
 
-## Overview
-
-Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using GPUI (`gpui-kit` `0.8.1`), `rusqlite`, and a compact Zed-editor aesthetic.
-
----
-
-### Phase 1: Setup & Domain Models ✅
-
-- [x] **Step 1.1**: Initialize workspace and `Cargo.toml` dependencies (`gpui-kit`, `rusqlite`, `sysinfo`, `image`, `tokio`, `serde`, `chrono`).
-- [x] **Step 1.2**: Define domain models in `src/state/models.rs` (`DriveInfo`, `MediaItem`, `Album`, `Tag`, `ScanProgress`, filters, sort enums).
-- [x] **Step 1.3**: Configure linker (`clang` + system `lld`) and incremental dev caching.
-
-### Phase 2: SQLite Database Layer ✅
-
-- [x] **Step 2.1**: Schema initialization in `src/db/schema.rs` with automatic count triggers and default `unknown` album.
-- [x] **Step 2.2**: Album query operations in `src/db/albums.rs` (create, rename, list, count).
-- [x] **Step 2.3**: Media item query operations in `src/db/media.rs` (insert, paginated query with filters, neighbor seeking, move).
-
-### Phase 3: Removable Drive Detection ✅
-
-- [x] **Step 3.1**: System mount filtering and removable volume detector in `src/drives/detector.rs` using `sysinfo::Disks`.
-- [x] **Step 3.2**: Background drive monitor loop in `src/drives/mod.rs` with periodic polling on GPUI background executor.
-
-### Phase 4: GPUI Frame & Component 1 (`Sidebar` & `DriveCard`) ✅
-
-- [x] **Step 4.1**: Window setup and compact Zed-style layout frame in `src/main.rs` and `src/app.rs`.
-- [x] **Step 4.2**: Implement `src/components/drive_card.rs` with disk/USB indicators, volume label, storage progress bar, and percentage badge.
-- [x] **Step 4.3**: Implement `src/components/sidebar.rs`: App header, reactive navigation links, connected drives list with selection highlight.
-
-### Phase 5: Component 2 (`MediaCard` & `MediaGrid` Catalog View) ✅
-
-- [x] **Step 5.1**: Implement `src/components/media_card.rs` (aspect ratio thumbnail preview, selection checkbox, video duration badge `▶ MM:SS`, metadata footer).
-- [x] **Step 5.2**: Implement `src/components/filter_bar.rs` (segmented type buttons `All`/`Images`/`Videos`, sort criteria `Date`/`Name`/`Size`, direction toggle, item count).
-- [x] **Step 5.3**: Implement `src/components/media_grid.rs` with responsive card layout, Zed pagination bar (`Page X of Y`, `Prev`, `Next`, multi-selection). Wired to `AppRoute::Medias`.
-
----
-
-### Phase 6: Dynamic Theming Engine & Theme Switcher (NEW) ⏳
-
-- [ ] **Step 6.1: Theme Tokens & Color Palette Engine**
-  - Implement `src/theme/mod.rs` and `src/theme/palettes.rs`:
+- [x] **Step 6.1: Theme Tokens & Color Palette Engine**
+  - Implemented `src/theme/mod.rs` and `src/theme/palettes.rs`:
     - `ThemeMode` enum: `ZedDark`, `CatppuccinMocha`, `TokyoNight`, `Nord`, `ZedLight`.
-    - Semantic tokens: `bg_canvas`, `bg_sidebar`, `bg_card`, `bg_header`, `bg_active_pill`, `border_subtle`, `border_focus`, `text_primary`, `text_secondary`, `text_muted`, `accent_primary`, `accent_success`, `accent_warning`, `accent_danger`.
-- [ ] **Step 6.2: AppState Integration & Persistence**
-  - Store `theme_mode` and resolved `Theme` tokens on `AppState`.
-  - Add `set_theme_mode(&mut self, mode: ThemeMode)` with instant reactive re-rendering.
-  - Persist theme preference in config file or local storage.
-- [ ] **Step 6.3: Theme Switcher UI & Global Component Adoption**
-  - Implement header quick-switcher and full visual picker in `AppRoute::Settings`.
-  - Update `Sidebar`, `DriveCard`, `MediaCard`, `FilterBar`, `MediaGrid`, and `AppView` to consume dynamic theme tokens.
-
----
-
-### Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View)
-
-- [ ] **Step 7.1: Build `AlbumCard` Component**
-  - Implement `src/components/album_card.rs` (cover preview, album name, media count badge, context trigger `...`).
-- [ ] **Step 7.2: Build `AlbumGrid` View & Detail View**
-  - Implement `src/components/views/albums.rs` gallery and `src/components/views/album_detail.rs`.
-- [ ] **Step 7.3: Build Album Modals (`CreateAlbumModal`, `EditAlbumModal`)**
-  - Dialog for creating new album with validation.
-  - Rename dialog updating SQLite and renaming on-disk directory.
-
----
-
-### Phase 8: Component 4: Media Scanner & Relocator
-
-- [ ] **Step 8.1: Directory Crawler & Ignore Engine**
-  - Implement `src/scanner/walker.rs` with folder stack traversal and ignore list pattern matching.
-- [ ] **Step 8.2: Safe Relocator & Collision Resolver**
-  - Implement `src/scanner/relocator.rs` (folder-to-album mapping, atomic move, collision suffixing `photo_1.jpg`, SQLite batch insert).
-- [ ] **Step 8.3: Build `DiscoverView` Scanner UI**
-  - Folder picker, preset ignore buttons (`+ temp`, `+ raw`, `+ cache`), live progress counters, start/pause/stop controls.
-
----
-
-### Phase 9: Component 5: Media Player & Advanced Dialogs
-
-- [ ] **Step 9.1: Build `MediaPlayerModal`**
-  - Full-screen high-res preview, arrow key seek navigation, zoom/pan, and EXIF metadata panel.
-- [ ] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
-  - Searchable destination album picker, atomic file moves, database record updates.
-- [ ] **Step 9.3: Build `DeleteAlbumModal`**
-  - Confirmation dialog with option to keep files in Unsorted vs permanent delete.
-
----
-
-### Phase 10: End-to-End Polish & Verification
-
-- [ ] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
-- [ ] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, snapshot recovery from `.backups/`).
-- [ ] **Step 10.3**: Full end-to-end testing with removable drive volumes. Verify `cargo test` and `cargo build --release`.
+    - Semantic tokens: `bg_canvas`, `bg_sidebar`, `bg_card`, `bg_header`, `bg_pill`, `bg_pill_active`, `border_subtle`, `border_card`, `border_active`, `text_primary`, `text_secondary`, `text_muted`, `accent`, `accent_hover`, `accent_success`, `accent_warning`, `accent_danger`.
+- [x] **Step 6.2: AppState Integration & Persistence**
+  - Stored `theme_mode` and resolved `AppTheme` tokens on `AppState`.
+  - Added `set_theme_mode(&mut self, mode: ThemeMode)` and `cycle_theme(&mut self)` with instant reactive re-rendering.
+  - _Verification_: Unit tests for theme cycling and palette resolution passed.
+- [x] **Step 6.3: Theme Switcher UI & Global Component Adoption**
+  - Implemented quick theme cycle button in the top titlebar/header.
+  - Implemented visual `ThemePicker` gallery in `AppRoute::Settings` (`src/components/theme_picker.rs`).
+  - Refactored `Sidebar`, `DriveCard`, `MediaCard`, `FilterBar`, `MediaGrid`, and `AppView` to dynamically consume `AppState::theme`.

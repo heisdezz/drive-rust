@@ -2,6 +2,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
 use crate::state::models::{DriveInfo, MediaFilterType, MediaSortBy, SortOrder};
+use crate::theme::{AppTheme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AppRoute {
@@ -44,6 +45,10 @@ pub struct AppState {
     pub selected_drive: Option<DriveInfo>,
     pub active_db: Option<Arc<LibraryDatabase>>,
 
+    // Theme Engine State
+    pub theme_mode: ThemeMode,
+    pub theme: AppTheme,
+
     // Media Catalog View State
     pub media_filter: MediaFilterType,
     pub media_sort_by: MediaSortBy,
@@ -55,11 +60,15 @@ pub struct AppState {
 
 impl AppState {
     pub fn new() -> Self {
+        let default_theme_mode = ThemeMode::ZedDark;
         Self {
             active_route: AppRoute::Dashboard,
             drives: Vec::new(),
             selected_drive: None,
             active_db: None,
+
+            theme_mode: default_theme_mode,
+            theme: AppTheme::from_mode(default_theme_mode),
 
             media_filter: MediaFilterType::All,
             media_sort_by: MediaSortBy::Date,
@@ -68,6 +77,18 @@ impl AppState {
             media_page_size: 24,
             selected_media_ids: HashSet::new(),
         }
+    }
+
+    pub fn set_theme_mode(&mut self, mode: ThemeMode) {
+        self.theme_mode = mode;
+        self.theme = AppTheme::from_mode(mode);
+    }
+
+    pub fn cycle_theme(&mut self) {
+        let all = ThemeMode::all();
+        let current_idx = all.iter().position(|m| *m == self.theme_mode).unwrap_or(0);
+        let next_idx = (current_idx + 1) % all.len();
+        self.set_theme_mode(all[next_idx]);
     }
 
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
@@ -149,5 +170,22 @@ impl AppState {
 impl Default for AppState {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_theme_mode_cycling() {
+        let mut state = AppState::new();
+        assert_eq!(state.theme_mode, ThemeMode::ZedDark);
+
+        state.cycle_theme();
+        assert_eq!(state.theme_mode, ThemeMode::CatppuccinMocha);
+
+        state.set_theme_mode(ThemeMode::Nord);
+        assert_eq!(state.theme.name(), "Nord Arctic");
     }
 }

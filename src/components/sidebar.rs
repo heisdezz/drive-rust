@@ -20,15 +20,16 @@ pub fn render_sidebar(
     let active_route = state.active_route;
     let drives = state.drives.clone();
     let selected_id = state.selected_drive.as_ref().map(|d| d.id.clone());
+    let theme = state.theme;
 
     div()
         .w(px(210.0))
         .h_full()
         .flex()
         .flex_col()
-        .bg(rgb(0x111317)) // Zed-style dark charcoal sidebar
+        .bg(theme.bg_sidebar)
         .border_r_1()
-        .border_color(rgb(0x1e2025)) // 1px subtle divider
+        .border_color(theme.border_subtle)
         // Compact App Header (38px height)
         .child(
             div()
@@ -38,17 +39,17 @@ pub fn render_sidebar(
                 .items_center()
                 .gap(px(8.0))
                 .border_b_1()
-                .border_color(rgb(0x1e2025))
+                .border_color(theme.border_subtle)
                 .child(
                     div()
                         .w(px(18.0))
                         .h(px(18.0))
                         .rounded(px(3.5))
-                        .bg(rgb(0x2563eb)) // Subtle vibrant blue
+                        .bg(theme.accent)
                         .flex()
                         .items_center()
                         .justify_center()
-                        .text_color(rgb(0xffffff))
+                        .text_color(if theme.is_dark { rgb(0xffffff) } else { rgb(0xffffff) })
                         .font_weight(FontWeight::BOLD)
                         .child("D"),
                 )
@@ -56,7 +57,7 @@ pub fn render_sidebar(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0xe4e4e7))
+                        .text_color(theme.text_primary)
                         .child("Rust Drive"),
                 )
                 .child(
@@ -65,8 +66,8 @@ pub fn render_sidebar(
                         .px(px(4.0))
                         .py(px(0.5))
                         .rounded(px(3.0))
-                        .bg(rgb(0x1c1e24))
-                        .text_color(rgb(0x71717a))
+                        .bg(theme.bg_pill)
+                        .text_color(theme.text_muted)
                         .child("v0.1"),
                 ),
         )
@@ -83,13 +84,13 @@ pub fn render_sidebar(
                     let state_handle = app_state.clone();
 
                     let text_color = if is_active {
-                        rgb(0xffffff)
+                        theme.text_primary
                     } else {
-                        rgb(0xa1a1aa)
+                        theme.text_secondary
                     };
 
                     let bg_color = if is_active {
-                        rgb(0x22262e) // Refined Zed active pill
+                        theme.bg_pill_active
                     } else {
                         rgba(0x00000000)
                     };
@@ -101,9 +102,9 @@ pub fn render_sidebar(
                         .py(px(4.5))
                         .rounded(px(4.0))
                         .bg(bg_color)
-                        .hover(|s| {
+                        .hover(move |s| {
                             if !is_active {
-                                s.bg(rgb(0x181a20)).text_color(rgb(0xe4e4e7))
+                                s.bg(theme.bg_card_hover).text_color(theme.text_primary)
                             } else {
                                 s
                             }
@@ -118,13 +119,12 @@ pub fn render_sidebar(
                             div()
                                 .flex()
                                 .items_center()
-                                .gap(px(7.0))
+                                .gap(px(8.0))
                                 .child(
                                     div()
                                         .w(px(14.0))
-                                        .flex()
-                                        .justify_center()
-                                        .text_color(if is_active { rgb(0x60a5fa) } else { rgb(0x71717a) })
+                                        .text_xs()
+                                        .text_color(if is_active { theme.accent } else { theme.text_muted })
                                         .child(icon),
                                 )
                                 .child(
@@ -141,12 +141,19 @@ pub fn render_sidebar(
                         )
                 })),
         )
-        // Section Divider & Label
+        // Divider
+        .child(
+            div()
+                .mx(px(8.0))
+                .my(px(4.0))
+                .h(px(1.0))
+                .bg(theme.border_subtle),
+        )
+        // Volumes Section Header
         .child(
             div()
                 .px(px(10.0))
-                .pt(px(10.0))
-                .pb(px(4.0))
+                .py(px(4.0))
                 .flex()
                 .items_center()
                 .justify_between()
@@ -154,7 +161,7 @@ pub fn render_sidebar(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0x52525b))
+                        .text_color(theme.text_muted)
                         .child("VOLUMES"),
                 )
                 .child(
@@ -162,9 +169,9 @@ pub fn render_sidebar(
                         .px(px(4.0))
                         .py(px(0.5))
                         .rounded(px(2.0))
-                        .bg(rgb(0x181a20))
+                        .bg(theme.bg_pill)
                         .text_xs()
-                        .text_color(rgb(0x71717a))
+                        .text_color(theme.text_muted)
                         .child(format!("{}", drives.len())),
                 ),
         )
@@ -183,7 +190,7 @@ pub fn render_sidebar(
                     let state_handle = app_state.clone();
                     let drive_to_select = drive.clone();
 
-                    render_drive_card(&drive, is_selected, move |_, _, cx| {
+                    render_drive_card(&drive, is_selected, &theme, move |_, _, cx| {
                         state_handle.update(cx, |state, cx| {
                             state.select_drive(drive_to_select.clone());
                             cx.notify();
@@ -197,7 +204,7 @@ pub fn render_sidebar(
                 .px(px(10.0))
                 .py(px(7.0))
                 .border_t_1()
-                .border_color(rgb(0x1e2025))
+                .border_color(theme.border_subtle)
                 .flex()
                 .items_center()
                 .gap(px(6.0))
@@ -206,12 +213,12 @@ pub fn render_sidebar(
                         .w(px(5.0))
                         .h(px(5.0))
                         .rounded(px(2.5))
-                        .bg(if state.selected_drive.is_some() { rgb(0x34d399) } else { rgb(0xf59e0b) }),
+                        .bg(if state.selected_drive.is_some() { theme.accent_success } else { theme.accent_warning }),
                 )
                 .child(
                     div()
                         .text_xs()
-                        .text_color(rgb(0x71717a))
+                        .text_color(theme.text_muted)
                         .overflow_hidden()
                         .child(
                             state

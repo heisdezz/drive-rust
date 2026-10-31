@@ -5,7 +5,7 @@ use crate::components::media_card::render_media_card;
 use crate::state::app_state::AppState;
 use crate::state::models::{MediaFilterType, MediaSortBy};
 
-/// Renders the complete media catalog grid view, including filter toolbar and pagination.
+/// Renders the complete media catalog grid view, including filter toolbar and pagination with dynamic theme support.
 pub fn render_media_grid(
     app_state: &Entity<AppState>,
     _window: &mut Window,
@@ -18,6 +18,7 @@ pub fn render_media_grid(
     let page = state.media_page;
     let page_size = state.media_page_size;
     let selected_ids = state.selected_media_ids.clone();
+    let theme = state.theme;
 
     let db_opt = state.active_db.clone();
 
@@ -71,6 +72,7 @@ pub fn render_media_grid(
             sort_by,
             sort_order,
             total_count,
+            &theme,
             on_filter,
             on_sort,
             move |_, _, cx| {
@@ -91,9 +93,9 @@ pub fn render_media_grid(
                         div()
                             .p(px(24.0))
                             .rounded(px(6.0))
-                            .bg(rgb(0x181a20))
+                            .bg(theme.bg_card)
                             .border_1()
-                            .border_color(rgb(0x23262d))
+                            .border_color(theme.border_card)
                             .flex()
                             .flex_col()
                             .items_center()
@@ -103,22 +105,22 @@ pub fn render_media_grid(
                                 div()
                                     .text_sm()
                                     .font_weight(FontWeight::SEMIBOLD)
-                                    .text_color(rgb(0xfbbf24))
+                                    .text_color(theme.accent_warning)
                                     .child("No Storage Drive Selected"),
                             )
                             .child(
                                 div()
                                     .text_xs()
-                                    .text_color(rgb(0x71717a))
+                                    .text_color(theme.text_muted)
                                     .child("Select a mounted drive from the sidebar to inspect its media library."),
                             )
                     } else if items.is_empty() {
                         div()
                             .p(px(32.0))
                             .rounded(px(6.0))
-                            .bg(rgb(0x181a20))
+                            .bg(theme.bg_card)
                             .border_1()
-                            .border_color(rgb(0x23262d))
+                            .border_color(theme.border_card)
                             .flex()
                             .flex_col()
                             .items_center()
@@ -128,13 +130,13 @@ pub fn render_media_grid(
                                 div()
                                     .text_sm()
                                     .font_weight(FontWeight::SEMIBOLD)
-                                    .text_color(rgb(0xd4d4d8))
+                                    .text_color(theme.text_primary)
                                     .child("No Media Items Found"),
                             )
                             .child(
                                 div()
                                     .text_xs()
-                                    .text_color(rgb(0x71717a))
+                                    .text_color(theme.text_muted)
                                     .child("No files match your current filters, or the drive hasn't been scanned yet. Go to Discover to start indexing."),
                             )
                     } else {
@@ -154,6 +156,7 @@ pub fn render_media_grid(
                                     .child(render_media_card(
                                         &item,
                                         is_selected,
+                                        &theme,
                                         move |_, _, cx| {
                                             state_click.update(cx, |s, cx| {
                                                 s.toggle_media_selection(id);
@@ -176,9 +179,9 @@ pub fn render_media_grid(
             div()
                 .h(px(36.0))
                 .px(px(10.0))
-                .bg(rgb(0x131519))
+                .bg(theme.bg_header)
                 .border_1()
-                .border_color(rgb(0x1e2025))
+                .border_color(theme.border_subtle)
                 .rounded(px(5.0))
                 .flex()
                 .items_center()
@@ -192,7 +195,7 @@ pub fn render_media_grid(
                         .child(
                             div()
                                 .text_xs()
-                                .text_color(rgb(0x71717a))
+                                .text_color(theme.text_muted)
                                 .child(format!("Page {} of {}", page, total_pages)),
                         )
                         .child(
@@ -207,10 +210,10 @@ pub fn render_media_grid(
                                             .px(px(6.0))
                                             .py(px(1.5))
                                             .rounded(px(3.0))
-                                            .bg(rgb(0x1e2433))
+                                            .bg(theme.bg_pill_active)
                                             .text_xs()
                                             .font_weight(FontWeight::MEDIUM)
-                                            .text_color(rgb(0x60a5fa))
+                                            .text_color(theme.accent)
                                             .child(format!("{} selected", selected_ids.len())),
                                     )
                                     .child(
@@ -218,8 +221,8 @@ pub fn render_media_grid(
                                             .id(SharedString::from("deselect-all-btn"))
                                             .cursor_pointer()
                                             .text_xs()
-                                            .text_color(rgb(0xa1a1aa))
-                                            .hover(|s| s.text_color(rgb(0xf87171)))
+                                            .text_color(theme.text_secondary)
+                                            .hover(move |s| s.text_color(theme.accent_danger))
                                             .on_click(move |_, _, cx| {
                                                 state_clear.update(cx, |s, cx| {
                                                     s.clear_media_selection();
@@ -247,11 +250,11 @@ pub fn render_media_grid(
                                 .py(px(3.0))
                                 .rounded(px(3.0))
                                 .border_1()
-                                .border_color(if has_prev { rgb(0x23262d) } else { rgba(0x00000000) })
-                                .bg(if has_prev { rgb(0x181a20) } else { rgba(0x00000000) })
-                                .text_color(if has_prev { rgb(0xd4d4d8) } else { rgb(0x3f3f46) })
+                                .border_color(if has_prev { theme.border_card } else { rgba(0x00000000) })
+                                .bg(if has_prev { theme.bg_card } else { rgba(0x00000000) })
+                                .text_color(if has_prev { theme.text_primary } else { theme.text_muted })
                                 .cursor_pointer()
-                                .hover(|s| if has_prev { s.bg(rgb(0x272c36)).text_color(rgb(0xffffff)) } else { s })
+                                .hover(move |s| if has_prev { s.bg(theme.bg_pill_active).text_color(theme.text_primary) } else { s })
                                 .on_click(move |_, _, cx| {
                                     if has_prev {
                                         state_prev.update(cx, |s, cx| {
@@ -275,11 +278,11 @@ pub fn render_media_grid(
                                 .py(px(3.0))
                                 .rounded(px(3.0))
                                 .border_1()
-                                .border_color(if has_next { rgb(0x23262d) } else { rgba(0x00000000) })
-                                .bg(if has_next { rgb(0x181a20) } else { rgba(0x00000000) })
-                                .text_color(if has_next { rgb(0xd4d4d8) } else { rgb(0x3f3f46) })
+                                .border_color(if has_next { theme.border_card } else { rgba(0x00000000) })
+                                .bg(if has_next { theme.bg_card } else { rgba(0x00000000) })
+                                .text_color(if has_next { theme.text_primary } else { theme.text_muted })
                                 .cursor_pointer()
-                                .hover(|s| if has_next { s.bg(rgb(0x272c36)).text_color(rgb(0xffffff)) } else { s })
+                                .hover(move |s| if has_next { s.bg(theme.bg_pill_active).text_color(theme.text_primary) } else { s })
                                 .on_click(move |_, _, cx| {
                                     if has_next {
                                         state_next.update(cx, |s, cx| {

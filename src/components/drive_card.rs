@@ -1,10 +1,12 @@
 use gpui_kit::*;
 use crate::state::models::{DriveInfo, DriveType};
+use crate::theme::AppTheme;
 
-/// Renders a single drive card in the sidebar with a compact, refined Zed-style design.
+/// Renders a single drive card in the sidebar with dynamic theme support.
 pub fn render_drive_card(
     drive: &DriveInfo,
     is_selected: bool,
+    theme: &AppTheme,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
     let drive_name = drive.name.clone();
@@ -18,25 +20,30 @@ pub fn render_drive_card(
         DriveType::Network => "NET",
     };
 
-    // Zed-style subtle active styling
     let (bg_color, border_color) = if is_selected {
-        (rgb(0x22262e), rgb(0x384152))
+        (theme.bg_pill_active, theme.border_active)
     } else {
         (rgba(0x00000000), rgba(0x00000000))
     };
 
     let icon_color = if is_external {
-        rgb(0x34d399) // Emerald-400
+        theme.accent_success
     } else {
-        rgb(0x60a5fa) // Blue-400
+        theme.accent
     };
 
     let bar_fill_color = if used_pct > 90 {
-        rgb(0xf87171) // Red-400
+        theme.accent_danger
     } else if is_external {
-        rgb(0x34d399) // Emerald-400
+        theme.accent_success
     } else {
-        rgb(0x60a5fa) // Blue-400
+        theme.accent
+    };
+
+    let hover_bg = if is_selected {
+        theme.bg_pill_active
+    } else {
+        theme.bg_card_hover
     };
 
     div()
@@ -48,7 +55,7 @@ pub fn render_drive_card(
         .border_1()
         .border_color(border_color)
         .bg(bg_color)
-        .hover(|s| s.bg(if is_selected { rgb(0x272c36) } else { rgb(0x1a1d24) }))
+        .hover(move |s| s.bg(hover_bg))
         .on_click(on_click)
         // Top row: status dot + volume name + type pill
         .child(
@@ -75,7 +82,7 @@ pub fn render_drive_card(
                             div()
                                 .text_xs()
                                 .font_weight(if is_selected { FontWeight::MEDIUM } else { FontWeight::NORMAL })
-                                .text_color(if is_selected { rgb(0xf4f4f5) } else { rgb(0xd4d4d8) })
+                                .text_color(if is_selected { theme.text_primary } else { theme.text_secondary })
                                 .overflow_hidden()
                                 .child(drive_name),
                         ),
@@ -85,8 +92,8 @@ pub fn render_drive_card(
                         .px(px(4.0))
                         .py(px(0.5))
                         .rounded(px(3.0))
-                        .bg(rgb(0x181a20))
-                        .text_color(rgb(0x71717a))
+                        .bg(theme.bg_pill)
+                        .text_color(theme.text_muted)
                         .font_weight(FontWeight::MEDIUM)
                         .child(type_label),
                 ),
@@ -100,7 +107,7 @@ pub fn render_drive_card(
                         .w_full()
                         .h(px(2.0))
                         .rounded(px(1.0))
-                        .bg(rgb(0x27272a))
+                        .bg(theme.border_subtle)
                         .overflow_hidden()
                         .child(
                             div()
@@ -116,7 +123,7 @@ pub fn render_drive_card(
                         .flex()
                         .items_center()
                         .justify_between()
-                        .text_color(rgb(0x71717a))
+                        .text_color(theme.text_muted)
                         .child(div().child(size_label))
                         .child(div().child(format!("{}%", used_pct))),
                 ),

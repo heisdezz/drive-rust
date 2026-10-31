@@ -2,6 +2,7 @@ use gpui_kit::*;
 use std::path::Path;
 use crate::drives::detector::format_bytes;
 use crate::state::models::MediaItem;
+use crate::theme::AppTheme;
 
 /// Formats media duration in seconds into `MM:SS` or `HH:MM:SS`.
 pub fn format_duration(seconds: i64) -> String {
@@ -16,10 +17,11 @@ pub fn format_duration(seconds: i64) -> String {
     }
 }
 
-/// Renders an individual media card in the media catalog grid.
+/// Renders an individual media card in the media catalog grid with dynamic theme support.
 pub fn render_media_card(
     item: &MediaItem,
     is_selected: bool,
+    theme: &AppTheme,
     on_click: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
     on_toggle_select: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
 ) -> impl IntoElement {
@@ -38,12 +40,14 @@ pub fn render_media_card(
         .to_string();
 
     let (border_color, bg_color) = if is_selected {
-        (rgb(0x3b82f6), rgb(0x1d2433)) // Blue border and subtle tint when selected
+        (theme.accent, theme.bg_pill_active)
     } else {
-        (rgb(0x23262d), rgb(0x181a20)) // Dark charcoal card
+        (theme.border_card, theme.bg_card)
     };
 
     let item_id = item.id;
+    let hover_border = if is_selected { theme.accent_hover } else { theme.border_active };
+    let hover_bg = if is_selected { theme.bg_pill_active } else { theme.bg_card_hover };
 
     div()
         .id(SharedString::from(format!("media-card-{}", item_id)))
@@ -55,13 +59,7 @@ pub fn render_media_card(
         .bg(bg_color)
         .overflow_hidden()
         .cursor_pointer()
-        .hover(|s| {
-            if is_selected {
-                s.border_color(rgb(0x60a5fa))
-            } else {
-                s.border_color(rgb(0x384152)).bg(rgb(0x1f232b))
-            }
-        })
+        .hover(move |s| s.border_color(hover_border).bg(hover_bg))
         .on_click(on_click)
         // Thumbnail & Overlay Area
         .child(
@@ -69,7 +67,7 @@ pub fn render_media_card(
                 .relative()
                 .w_full()
                 .h(px(108.0))
-                .bg(rgb(0x111317))
+                .bg(theme.bg_sidebar)
                 .flex()
                 .items_center()
                 .justify_center()
@@ -82,14 +80,14 @@ pub fn render_media_card(
                         .gap(px(3.0))
                         .child(
                             div()
-                                .text_color(if is_video { rgb(0xa855f7) } else { rgb(0x38bdf8) })
+                                .text_color(if is_video { theme.accent } else { theme.accent_hover })
                                 .child(if is_video { "🎬" } else { "🖼" }),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::MEDIUM)
-                                .text_color(rgb(0x52525b))
+                                .text_color(theme.text_muted)
                                 .child(if is_video { "VIDEO" } else { "IMAGE" }),
                         ),
                 )
@@ -104,8 +102,8 @@ pub fn render_media_card(
                         .h(px(16.0))
                         .rounded(px(3.0))
                         .border_1()
-                        .border_color(if is_selected { rgb(0x3b82f6) } else { rgb(0x3f3f46) })
-                        .bg(if is_selected { rgb(0x2563eb) } else { rgba(0x00000099) })
+                        .border_color(if is_selected { theme.accent } else { theme.border_subtle })
+                        .bg(if is_selected { theme.accent } else { rgba(0x00000099) })
                         .flex()
                         .items_center()
                         .justify_center()
@@ -160,7 +158,7 @@ pub fn render_media_card(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::MEDIUM)
-                        .text_color(if is_selected { rgb(0xffffff) } else { rgb(0xe4e4e7) })
+                        .text_color(if is_selected { theme.text_primary } else { theme.text_secondary })
                         .overflow_hidden()
                         .child(filename),
                 )
@@ -172,13 +170,13 @@ pub fn render_media_card(
                         .child(
                             div()
                                 .text_xs()
-                                .text_color(rgb(0x71717a))
+                                .text_color(theme.text_muted)
                                 .child(size_str),
                         )
                         .child(
                             div()
                                 .text_xs()
-                                .text_color(rgb(0x52525b))
+                                .text_color(theme.text_muted)
                                 .child(date_str),
                         ),
                 ),

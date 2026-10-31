@@ -1,16 +1,18 @@
 use gpui_kit::*;
 use std::sync::Arc;
 use crate::state::models::{MediaFilterType, MediaSortBy, SortOrder};
+use crate::theme::AppTheme;
 
 pub type OnFilterCallback = Arc<dyn Fn(MediaFilterType, &mut App) + 'static>;
 pub type OnSortCallback = Arc<dyn Fn(MediaSortBy, &mut App) + 'static>;
 
-/// Renders the compact toolbar for filtering, sorting, and searching media catalog.
+/// Renders the compact toolbar for filtering, sorting, and searching media catalog with dynamic theme support.
 pub fn render_filter_bar(
     filter: MediaFilterType,
     sort_by: MediaSortBy,
     sort_order: SortOrder,
     total_count: i64,
+    theme: &AppTheme,
     on_filter: OnFilterCallback,
     on_sort: OnSortCallback,
     on_toggle_order: impl Fn(&ClickEvent, &mut Window, &mut App) + 'static,
@@ -27,13 +29,15 @@ pub fn render_filter_bar(
         (MediaSortBy::Size, "Size"),
     ];
 
+    let t = *theme;
+
     div()
         .w_full()
         .px(px(10.0))
         .py(px(6.0))
-        .bg(rgb(0x131519))
+        .bg(t.bg_header)
         .border_1()
-        .border_color(rgb(0x1e2025))
+        .border_color(t.border_subtle)
         .rounded(px(5.0))
         .flex()
         .items_center()
@@ -47,15 +51,15 @@ pub fn render_filter_bar(
                 .gap(px(2.0))
                 .p(px(2.0))
                 .rounded(px(4.0))
-                .bg(rgb(0x181a20))
+                .bg(t.bg_card)
                 .border_1()
-                .border_color(rgb(0x23262d))
+                .border_color(t.border_card)
                 .children(filter_options.into_iter().map(move |(f, label)| {
                     let is_active = filter == f;
                     let (bg, text, border) = if is_active {
-                        (rgb(0x272c36), rgb(0xffffff), rgb(0x384152))
+                        (t.bg_pill_active, t.text_primary, t.border_active)
                     } else {
-                        (rgba(0x00000000), rgb(0x8e8e93), rgba(0x00000000))
+                        (rgba(0x00000000), t.text_muted, rgba(0x00000000))
                     };
 
                     let cb = on_filter.clone();
@@ -69,7 +73,7 @@ pub fn render_filter_bar(
                         .bg(bg)
                         .border_1()
                         .border_color(border)
-                        .hover(|s| if !is_active { s.bg(rgb(0x1e2128)).text_color(rgb(0xd4d4d8)) } else { s })
+                        .hover(move |s| if !is_active { s.bg(t.bg_card_hover).text_color(t.text_secondary) } else { s })
                         .on_click(move |_, _window, cx| (cb)(f, cx))
                         .child(
                             div()
@@ -89,7 +93,7 @@ pub fn render_filter_bar(
                 .child(
                     div()
                         .text_xs()
-                        .text_color(rgb(0x71717a))
+                        .text_color(t.text_muted)
                         .child(format!("{} items", total_count)),
                 ),
         )
@@ -107,15 +111,15 @@ pub fn render_filter_bar(
                         .gap(px(2.0))
                         .p(px(2.0))
                         .rounded(px(4.0))
-                        .bg(rgb(0x181a20))
+                        .bg(t.bg_card)
                         .border_1()
-                        .border_color(rgb(0x23262d))
+                        .border_color(t.border_card)
                         .children(sort_options.into_iter().map(move |(s, label)| {
                             let is_active = sort_by == s;
                             let (bg, text, border) = if is_active {
-                                (rgb(0x272c36), rgb(0xffffff), rgb(0x384152))
+                                (t.bg_pill_active, t.text_primary, t.border_active)
                             } else {
-                                (rgba(0x00000000), rgb(0x8e8e93), rgba(0x00000000))
+                                (rgba(0x00000000), t.text_muted, rgba(0x00000000))
                             };
 
                             let cb = on_sort.clone();
@@ -129,7 +133,7 @@ pub fn render_filter_bar(
                                 .bg(bg)
                                 .border_1()
                                 .border_color(border)
-                                .hover(|st| if !is_active { st.bg(rgb(0x1e2128)).text_color(rgb(0xd4d4d8)) } else { st })
+                                .hover(move |st| if !is_active { st.bg(t.bg_card_hover).text_color(t.text_secondary) } else { st })
                                 .on_click(move |_, _window, cx| (cb)(s, cx))
                                 .child(
                                     div()
@@ -148,16 +152,16 @@ pub fn render_filter_bar(
                         .px(px(7.0))
                         .py(px(3.0))
                         .rounded(px(3.0))
-                        .bg(rgb(0x181a20))
+                        .bg(t.bg_card)
                         .border_1()
-                        .border_color(rgb(0x23262d))
-                        .hover(|s| s.bg(rgb(0x272c36)).text_color(rgb(0xffffff)))
+                        .border_color(t.border_card)
+                        .hover(move |s| s.bg(t.bg_pill_active).text_color(t.text_primary))
                         .on_click(on_toggle_order)
                         .child(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::MEDIUM)
-                                .text_color(rgb(0xa1a1aa))
+                                .text_color(t.text_secondary)
                                 .child(match sort_order {
                                     SortOrder::Asc => "▲ Asc",
                                     SortOrder::Desc => "▼ Desc",
