@@ -26,10 +26,10 @@
 - [x] **Step 2.1**: Implement `src/db/schema.rs` with tables (`media_items`, `albums`, `scan_album_sources`, `tags`, `media_tags`) and triggers maintaining `albums.media_count`. Ensure fallback `unknown` album exists.
 - [x] **Step 2.2**: Implement basic queries in `src/db/media.rs` and `src/db/albums.rs` (CRUD, pagination, count maintenance, next/prev seek). Verify with `:memory:` unit tests.
 
-### Phase 3: Removable Drive Detection
+### Phase 3: Removable Drive Detection ✅
 
-- [ ] **Step 3.1**: Implement `src/drives/detector.rs` using `sysinfo::Disks`. Filter out system partitions (`/sys`, `/proc`, `/boot`, etc.) and classify drives (`Internal`, `External`, `Network`).
-- [ ] **Step 3.2**: Add background drive polling loop updating `AppState` when USB drives are connected or removed.
+- [x] **Step 3.1**: Implement `src/drives/detector.rs` using `sysinfo::Disks`. Filter out system partitions (`/sys`, `/proc`, `/boot`, etc.) and classify drives (`Internal`, `External`, `Network`).
+- [x] **Step 3.2**: Add background drive polling loop (`DriveMonitor`) in `src/drives/mod.rs` updating listeners when USB drives are connected or removed.
 
 ### Phase 4: GPUI Frame & Component 1: `Sidebar` & `DriveCard`
 

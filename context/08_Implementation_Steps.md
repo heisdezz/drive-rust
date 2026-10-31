@@ -20,7 +20,7 @@ updated: 2026-10-31
 ```mermaid
 flowchart LR
     P1["Phase 1: Project Setup & Models (Done)"] --> P2["Phase 2: Simple SQLite DB Layer (Done)"]
-    P2 --> P3[Phase 3: Drive Detection Service]
+    P2 --> P3["Phase 3: Drive Detection Service (Done)"]
     P3 --> P4[Phase 4: GPUI Frame & Sidebar]
     P4 --> P5[Phase 5: MediaCard & MediaGrid]
     P5 --> P6[Phase 6: AlbumCard & Albums View]
@@ -60,13 +60,17 @@ flowchart LR
 
 ---
 
-### Phase 3: Removable Drive Detection
+### Phase 3: Removable Drive Detection ✅
 
-- [ ] **Step 3.1: Sysinfo Volume Scanner**
-  - Implement `src/drives/detector.rs` using `sysinfo::Disks`.
-  - Filter out system virtual filesystems (`/sys`, `/proc`, `/boot`, `tmpfs`, etc.).
-  - Identify mount points, formatted size (`1.8 TB`), and space usage percentage.
-  - _Verification_: Standalone CLI test printing detected drives in terminal.
+- [x] **Step 3.1: Sysinfo Volume Scanner**
+  - Implemented `src/drives/detector.rs` using `sysinfo::Disks`.
+  - Filtered out system partitions (`/sys`, `/proc`, `/boot`, `tmpfs`, etc.) and classified drives (`Internal`, `External`, `Network`).
+  - Extracted formatted sizes, usage percentages, and human-friendly labels.
+  - _Verification_: 4 unit tests passed covering size formatting, system mount filtering, virtual filesystem classification, and live disk enumeration.
+- [x] **Step 3.2: Background Drive Monitor**
+  - Implemented `DriveMonitor` in `src/drives/mod.rs` with periodic background polling and change detection.
+  - Emits updated `Vec<DriveInfo>` whenever volumes are inserted or unmounted.
+  - _Verification_: Async test `test_drive_monitor_emits_initial_drives` passed.
 
 ---
 
