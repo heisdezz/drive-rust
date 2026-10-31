@@ -2,6 +2,8 @@ use gpui_kit::*;
 use crate::state::app_state::{AppRoute, AppState};
 use crate::components::sidebar::render_sidebar;
 use crate::components::media_grid::render_media_grid;
+use crate::components::album_grid::render_album_grid;
+use crate::components::album_modal::{render_create_album_modal, render_edit_album_modal};
 use crate::components::theme_picker::render_theme_picker;
 
 pub struct AppView {
@@ -26,10 +28,13 @@ impl Render for AppView {
         let selected_drive = state.selected_drive.clone();
         let db_connected = state.active_db.is_some();
         let theme = state.theme;
+        let show_create_album = state.show_create_album_modal;
+        let show_edit_album = state.editing_album.is_some();
 
         let state_theme = self.app_state.clone();
 
         div()
+            .relative()
             .flex()
             .w_full()
             .h_full()
@@ -182,6 +187,21 @@ impl Render for AppView {
                             .child(render_route_content(&self.app_state, active_route, selected_drive.as_ref(), window, cx)),
                     ),
             )
+            // Modals
+            .child(
+                if show_create_album {
+                    div().child(render_create_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
+            .child(
+                if show_edit_album {
+                    div().child(render_edit_album_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
     }
 }
 
@@ -198,6 +218,7 @@ fn render_route_content(
 
     match route {
         AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
+        AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)),
         AppRoute::Settings => div()
             .flex()
             .flex_col()

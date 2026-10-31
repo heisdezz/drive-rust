@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
-use crate::state::models::{DriveInfo, MediaFilterType, MediaSortBy, SortOrder};
+use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, SortOrder};
 use crate::theme::{AppTheme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -49,6 +49,11 @@ pub struct AppState {
     pub theme_mode: ThemeMode,
     pub theme: AppTheme,
 
+    // Album View & Modal State
+    pub selected_album_id: Option<i64>,
+    pub show_create_album_modal: bool,
+    pub editing_album: Option<Album>,
+
     // Media Catalog View State
     pub media_filter: MediaFilterType,
     pub media_sort_by: MediaSortBy,
@@ -69,6 +74,10 @@ impl AppState {
 
             theme_mode: default_theme_mode,
             theme: AppTheme::from_mode(default_theme_mode),
+
+            selected_album_id: None,
+            show_create_album_modal: false,
+            editing_album: None,
 
             media_filter: MediaFilterType::All,
             media_sort_by: MediaSortBy::Date,
@@ -91,6 +100,28 @@ impl AppState {
         self.set_theme_mode(all[next_idx]);
     }
 
+    pub fn select_album(&mut self, album_id: Option<i64>) {
+        self.selected_album_id = album_id;
+        self.media_page = 1;
+        self.selected_media_ids.clear();
+    }
+
+    pub fn open_create_album_modal(&mut self) {
+        self.show_create_album_modal = true;
+    }
+
+    pub fn close_create_album_modal(&mut self) {
+        self.show_create_album_modal = false;
+    }
+
+    pub fn open_edit_album_modal(&mut self, album: Album) {
+        self.editing_album = Some(album);
+    }
+
+    pub fn close_edit_album_modal(&mut self) {
+        self.editing_album = None;
+    }
+
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
         // If current selected drive was removed or none selected, pick the first drive
         if let Some(selected) = &self.selected_drive {
@@ -109,6 +140,7 @@ impl AppState {
     pub fn select_drive(&mut self, drive: DriveInfo) {
         if self.selected_drive.as_ref().map(|d| &d.id) != Some(&drive.id) {
             self.selected_drive = Some(drive);
+            self.selected_album_id = None;
             self.reopen_database();
         }
     }
@@ -187,5 +219,20 @@ mod tests {
 
         state.set_theme_mode(ThemeMode::Nord);
         assert_eq!(state.theme.name(), "Nord Arctic");
+    }
+
+    #[test]
+    fn test_album_selection_and_modal_state() {
+        let mut state = AppState::new();
+        assert_eq!(state.selected_album_id, None);
+
+        state.select_album(Some(42));
+        assert_eq!(state.selected_album_id, Some(42));
+
+        state.open_create_album_modal();
+        assert!(state.show_create_album_modal);
+
+        state.close_create_album_modal();
+        assert!(!state.show_create_album_modal);
     }
 }
