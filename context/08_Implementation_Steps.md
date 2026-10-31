@@ -46,21 +46,19 @@ This checklist tracks the step-by-step progress of the port from Electrobun to R
 - [x] **Step UI-1.5**: \"Recent Albums\" preview card strip with direct album selection on click and `View All Albums →` navigation.
 - [x] **Step UI-1.6**: Compact unmounted state with significantly smaller welcome banner and connected drive selector card.
 
-#### Stage 2: Discover & Scanner View (`discover`) 🎯 (Next)
+#### Stage 2: Discover & Scanner View (`discover`) ✅ (Completed)
 
-- [ ] **Step UI-2.1**: Target drive summary banner with quick scan scope indicators.
-- [ ] **Step UI-2.2**: Ignore pattern management interface:
-  - Monochrome preset pills (`+ temp`, `+ cache`, `+ raw_dumps`, `+ thumbnails`, `+ backups`, `+ node_modules`).
-  - Custom pattern text entry with Add button.
-  - Removable active pattern chips (`×`) with hover highlight.
-- [ ] **Step UI-2.3**: Live scan monitoring panel:
-  - Active scanning state pill (Idle / Scanning / Paused / Completed).
-  - Progress bar and animation.
-  - Live metric counters: `Files Crawled`, `Media Cataloged`, `Ignored Files Skipped`.
-  - Current directory label truncation.
-- [ ] **Step UI-2.4**: Scanner control buttons (`▷ Start Scan`, `❚❚ Pause`, `■ Cancel`).
+- [x] **Step UI-2.1**: Target drive summary banner with quick scan scope indicators, root path, and destination folder.
+- [x] **Step UI-2.2**: Ignore pattern management interface:
+  - Monochrome preset pills (`+ temp`, `+ cache`, `+ raw_dumps`, `+ backups`, `+ downloads`, `+ exports`, `+ thumbnails`, `+ node_modules`).
+  - Active ignore rules tags with `×` remove icon and hover state.
+- [x] **Step UI-2.3**: Live scan monitoring panel:
+  - Active scanning state pill (`● Scanning...` / `✓ Scan Complete` / `○ Ready`).
+  - Live metric counters: `FILES CRAWLED`, `MEDIA CATALOGED`, `ACTIVE IGNORES`, `STATUS`.
+  - Current directory processing label.
+- [x] **Step UI-2.4**: Scanner control buttons (`▷ Start Discovery Scan`, `Reset Metrics`).
 
-#### Stage 3: Albums Gallery View (`album`)
+#### Stage 3: Albums Gallery View (`album`) 🎯 (Next)
 
 - [ ] **Step UI-3.1**: Gallery toolbar with album search input, total albums count badge, and `+ New Album` button.
 - [ ] **Step UI-3.2**: Refined `AlbumCard` with latest media item cover image, item count badge, folder path, and context menu (`Edit`).

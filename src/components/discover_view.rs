@@ -2,10 +2,21 @@ use gpui_kit::*;
 use crate::scanner::walker::crawl_directory;
 use crate::scanner::relocator::relocate_media;
 use crate::state::app_state::AppState;
+use crate::theme::icons::Icon;
 
-const SUGGESTED_IGNORES: &[&str] = &["temp", "cache", "raw_dumps", "backups", "downloads", "exports"];
+const SUGGESTED_IGNORES: &[&str] = &[
+    "temp",
+    "cache",
+    "raw_dumps",
+    "backups",
+    "downloads",
+    "exports",
+    "thumbnails",
+    "node_modules",
+];
 
-/// Renders the Media Discovery, Ignore Configuration, and Auto-Catalog Scanner view.
+/// Renders the Media Discovery, Ignore Configuration, and Auto-Catalog Scanner view
+/// with strict monochrome typography and compact Zed spacing.
 pub fn render_discover_view(
     app_state: &Entity<AppState>,
     _window: &mut Window,
@@ -49,13 +60,13 @@ pub fn render_discover_view(
                             div()
                                 .flex()
                                 .items_center()
-                                .gap(px(6.0))
+                                .gap(px(8.0))
                                 .child(
                                     div()
                                         .text_sm()
-                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .font_weight(FontWeight::BOLD)
                                         .text_color(theme.text_primary)
-                                        .child("🧭 Media Discovery & Auto-Catalog Scanner"),
+                                        .child(format!("{} Media Discovery & Auto-Catalog Scanner", Icon::DISCOVER)),
                                 )
                                 .child(
                                     div()
@@ -63,25 +74,35 @@ pub fn render_discover_view(
                                         .py(px(1.5))
                                         .rounded(px(3.0))
                                         .bg(if scan_progress.is_scanning {
-                                            theme.accent_warning
+                                            theme.bg_pill_active
                                         } else if scan_progress.found_count > 0 {
-                                            theme.accent_success
+                                            theme.bg_pill
                                         } else {
                                             theme.bg_pill
                                         })
+                                        .border_1()
+                                        .border_color(if scan_progress.is_scanning {
+                                            theme.accent
+                                        } else if scan_progress.found_count > 0 {
+                                            theme.accent_success
+                                        } else {
+                                            theme.border_subtle
+                                        })
                                         .text_xs()
                                         .font_weight(FontWeight::MEDIUM)
-                                        .text_color(if scan_progress.is_scanning || scan_progress.found_count > 0 {
-                                            rgb(0xffffff)
+                                        .text_color(if scan_progress.is_scanning {
+                                            theme.accent
+                                        } else if scan_progress.found_count > 0 {
+                                            theme.accent_success
                                         } else {
                                             theme.text_muted
                                         })
                                         .child(if scan_progress.is_scanning {
-                                            "Scanning..."
+                                            format!("{} Scanning...", Icon::DOT)
                                         } else if scan_progress.found_count > 0 {
-                                            "Scan Complete"
+                                            format!("{} Scan Complete", Icon::CHECK)
                                         } else {
-                                            "Idle"
+                                            format!("{} Ready", Icon::CIRCLE)
                                         }),
                                 ),
                         )
@@ -119,14 +140,18 @@ pub fn render_discover_view(
                                         div()
                                             .text_xs()
                                             .text_color(theme.text_muted)
-                                            .child(format!("Root Path: {}", drive.mount_path.display())),
+                                            .child(format!("Root Path: {} • Destination: {}/albums", drive.mount_path.display(), drive.mount_path.display())),
                                     ),
                             )
                             .child(
                                 div()
+                                    .px(px(6.0))
+                                    .py(px(2.0))
+                                    .rounded(px(3.0))
+                                    .bg(theme.bg_pill)
                                     .text_xs()
                                     .font_weight(FontWeight::MEDIUM)
-                                    .text_color(theme.accent)
+                                    .text_color(theme.text_secondary)
                                     .child(format!("{} ({}% used)", drive.size_formatted, drive.used_percentage)),
                             )
                     } else {
@@ -134,9 +159,11 @@ pub fn render_discover_view(
                             .p(px(10.0))
                             .rounded(px(4.0))
                             .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
                             .text_xs()
-                            .text_color(theme.accent_warning)
-                            .child("⚠️ No external drive selected. Please mount or select a volume from the sidebar.")
+                            .text_color(theme.text_muted)
+                            .child(format!("{} No external drive selected. Please mount or select a volume from the sidebar.", Icon::INFO))
                     },
                 ),
         )
@@ -181,7 +208,7 @@ pub fn render_discover_view(
                                 .text_xs()
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(theme.text_muted)
-                                .child("ADD PRESETS:"),
+                                .child("PRESET FILTERS:"),
                         )
                         .child(
                             div()
@@ -217,7 +244,7 @@ pub fn render_discover_view(
                                                 .text_xs()
                                                 .font_weight(FontWeight::MEDIUM)
                                                 .text_color(if is_already_added { theme.accent } else { theme.text_secondary })
-                                                .child(format!("{}+ {}", if is_already_added { "✓ " } else { "" }, preset)),
+                                                .child(format!("{}+ {}", if is_already_added { format!("{} ", Icon::CHECK) } else { "".to_string() }, preset)),
                                         )
                                 })),
                         ),
@@ -226,45 +253,67 @@ pub fn render_discover_view(
                 .child(
                     div()
                         .flex()
-                        .flex_wrap()
-                        .gap(px(6.0))
-                        .children(ignore_patterns.iter().map(|pat| {
-                            let state_del = app_state.clone();
-                            let pattern_name = pat.clone();
-
+                        .flex_col()
+                        .gap(px(4.0))
+                        .child(
                             div()
-                                .id(SharedString::from(format!("active-ignore-{}", pattern_name)))
-                                .px(px(8.0))
-                                .py(px(3.0))
-                                .rounded(px(3.0))
-                                .bg(theme.bg_pill)
-                                .border_1()
-                                .border_color(theme.border_subtle)
-                                .flex()
-                                .items_center()
-                                .gap(px(6.0))
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.text_primary)
-                                        .child(pattern_name.clone()),
-                                )
-                                .child(
-                                    div()
-                                        .id(SharedString::from(format!("remove-ignore-{}", pattern_name)))
-                                        .cursor_pointer()
-                                        .text_xs()
-                                        .text_color(theme.text_muted)
-                                        .hover(move |s| s.text_color(theme.accent_danger))
-                                        .on_click(move |_, _, cx| {
-                                            state_del.update(cx, |s, cx| {
-                                                s.remove_ignore_pattern(&pattern_name);
-                                                cx.notify();
-                                            });
-                                        })
-                                        .child("✕"),
-                                )
-                        })),
+                                .text_xs()
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.text_muted)
+                                .child("ACTIVE IGNORES:"),
+                        )
+                        .child(
+                            if ignore_patterns.is_empty() {
+                                div()
+                                    .text_xs()
+                                    .text_color(theme.text_muted)
+                                    .child("No custom ignore patterns configured. Built-in defaults active.")
+                                    .into_any_element()
+                            } else {
+                                div()
+                                    .flex()
+                                    .flex_wrap()
+                                    .gap(px(6.0))
+                                    .children(ignore_patterns.iter().map(|pat| {
+                                        let state_del = app_state.clone();
+                                        let pattern_name = pat.clone();
+
+                                        div()
+                                            .id(SharedString::from(format!("active-ignore-{}", pattern_name)))
+                                            .px(px(8.0))
+                                            .py(px(3.0))
+                                            .rounded(px(3.0))
+                                            .bg(theme.bg_pill)
+                                            .border_1()
+                                            .border_color(theme.border_subtle)
+                                            .flex()
+                                            .items_center()
+                                            .gap(px(6.0))
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .text_color(theme.text_primary)
+                                                    .child(pattern_name.clone()),
+                                            )
+                                            .child(
+                                                div()
+                                                    .id(SharedString::from(format!("remove-ignore-{}", pattern_name)))
+                                                    .cursor_pointer()
+                                                    .text_xs()
+                                                    .text_color(theme.text_muted)
+                                                    .hover(move |s| s.text_color(theme.accent_danger))
+                                                    .on_click(move |_, _, cx| {
+                                                        state_del.update(cx, |s, cx| {
+                                                            s.remove_ignore_pattern(&pattern_name);
+                                                            cx.notify();
+                                                        });
+                                                    })
+                                                    .child(Icon::CLOSE),
+                                            )
+                                    }))
+                                    .into_any_element()
+                            },
+                        ),
                 ),
         )
         // Card 3: Live Scanner Progress & Action Controls
@@ -280,16 +329,32 @@ pub fn render_discover_view(
                 .gap(px(12.0))
                 .child(
                     div()
-                        .text_xs()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(theme.text_primary)
-                        .child("Live Scanner Metrics"),
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .text_xs()
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_color(theme.text_primary)
+                                .child("Live Scanner Metrics"),
+                        )
+                        .child(
+                            if scan_progress.is_scanning {
+                                div()
+                                    .text_xs()
+                                    .text_color(theme.accent)
+                                    .child(format!("{} Processing...", Icon::DOT))
+                            } else {
+                                div()
+                            },
+                        ),
                 )
                 // Progress stats grid
                 .child(
                     div()
                         .flex()
-                        .gap(px(12.0))
+                        .gap(px(10.0))
                         .child(
                             div()
                                 .flex_1()
@@ -301,8 +366,9 @@ pub fn render_discover_view(
                                 .child(
                                     div()
                                         .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
                                         .text_color(theme.text_muted)
-                                        .child("Files Crawled"),
+                                        .child("FILES CRAWLED"),
                                 )
                                 .child(
                                     div()
@@ -323,8 +389,9 @@ pub fn render_discover_view(
                                 .child(
                                     div()
                                         .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
                                         .text_color(theme.text_muted)
-                                        .child("Media Cataloged"),
+                                        .child("MEDIA CATALOGED"),
                                 )
                                 .child(
                                     div()
@@ -345,8 +412,9 @@ pub fn render_discover_view(
                                 .child(
                                     div()
                                         .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
                                         .text_color(theme.text_muted)
-                                        .child("Active Ignore Filters"),
+                                        .child("ACTIVE IGNORES"),
                                 )
                                 .child(
                                     div()
@@ -355,16 +423,56 @@ pub fn render_discover_view(
                                         .text_color(theme.accent)
                                         .child(format!("{}", ignore_patterns.len())),
                                 )
+                        )
+                        .child(
+                            div()
+                                .flex_1()
+                                .p(px(10.0))
+                                .rounded(px(4.0))
+                                .bg(theme.bg_sidebar)
+                                .border_1()
+                                .border_color(theme.border_subtle)
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_muted)
+                                        .child("STATUS"),
+                                )
+                                .child(
+                                    div()
+                                        .text_sm()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(if scan_progress.is_scanning {
+                                            theme.accent
+                                        } else if scan_progress.found_count > 0 {
+                                            theme.accent_success
+                                        } else {
+                                            theme.text_secondary
+                                        })
+                                        .child(if scan_progress.is_scanning {
+                                            "Scanning"
+                                        } else if scan_progress.found_count > 0 {
+                                            "Finished"
+                                        } else {
+                                            "Idle"
+                                        }),
+                                )
                         ),
                 )
                 // Current Folder
                 .child(
                     if !scan_progress.current_folder.is_empty() {
                         div()
+                            .p(px(8.0))
+                            .rounded(px(4.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
                             .text_xs()
-                            .text_color(theme.text_muted)
+                            .text_color(theme.text_secondary)
                             .overflow_hidden()
-                            .child(format!("Processing: {}", scan_progress.current_folder))
+                            .child(format!("Processing folder: {}", scan_progress.current_folder))
                     } else {
                         div()
                     },
@@ -474,7 +582,11 @@ pub fn render_discover_view(
                                             .text_xs()
                                             .font_weight(FontWeight::SEMIBOLD)
                                             .text_color(if can_scan { rgb(0xffffff) } else { theme.text_muted })
-                                            .child(if scan_progress.is_scanning { "Scanning..." } else { "▶ Start Discovery Scan" }),
+                                            .child(if scan_progress.is_scanning {
+                                                format!("{} Scanning...", Icon::DOT)
+                                            } else {
+                                                format!("{} Start Discovery Scan", Icon::PLAY)
+                                            }),
                                     )
                             },
                         )

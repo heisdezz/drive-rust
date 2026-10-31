@@ -26,7 +26,10 @@ impl Icon {
     pub const ARROW_DOWN: &'static str = "↓";
     pub const BULLET_ACTIVE: &'static str = "●";
     pub const BULLET_INACTIVE: &'static str = "○";
+    pub const DOT: &'static str = "●";
+    pub const CIRCLE: &'static str = "○";
     pub const PLUS: &'static str = "+";
     pub const REFRESH: &'static str = "↻";
     pub const THEME: &'static str = "◑";
+    pub const SEARCH: &'static str = "⌕";
 }
