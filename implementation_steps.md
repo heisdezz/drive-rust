@@ -1,17 +1,17 @@
-# Rust Drive - Implementation Roadmap
+# Implementation Steps: Rust Drive Native Port
 
-## Overview
+## Overview & Methodology
 
-Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using GPUI (`gpui-kit` `0.8.1`), `rusqlite`, and a compact Zed-editor aesthetic.
+This tracker follows the strict dependency order for the complete native GPUI port of `heisdezz/drive`. Each phase and sub-step must be verified via `cargo check` and unit tests before committing.
 
 ---
 
-### Core Architecture Phases (Completed)
+### Progress Summary
 
-- [x] **Phase 1: Setup & Domain Models ✅** (`Cargo.toml`, domain models, linker setup)
-- [x] **Phase 2: SQLite Database Layer ✅** (Schema, count triggers, `albums` & `media_items` CRUD)
-- [x] **Phase 3: Removable Drive Detection ✅** (`sysinfo::Disks`, virtual fs filter, background monitor)
-- [x] **Phase 4: GPUI Frame & Component 1 (`Sidebar` & `DriveCard`) ✅** (Window frame, sidebar, drive selector)
+- [x] **Phase 1: Project Setup & GPUI Foundation ✅** (`Cargo.toml`, basic GPUI window, theme tokens)
+- [x] **Phase 2: Removable Drive Detection Module ✅** (`sysinfo`-based drive scanner, mock fallback)
+- [x] **Phase 3: SQLite Database Schema & Rusqlite Driver ✅** (Schema, queries, migrations, indexes)
+- [x] **Phase 4: Component 1 (`Sidebar` & `DriveCard`) ✅** (Responsive sidebar, drive status, navigation)
 - [x] **Phase 5: Component 2 (`MediaCard` & `MediaGrid` Catalog View) ✅** (Card layout, filter bar, pagination)
 - [x] **Phase 6: Dynamic Theming Engine & Theme Switcher ✅** (5 themes, semantic tokens, quick toggle)
 - [x] **Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View) ✅** (Album grid, create/edit modals)
@@ -28,27 +28,20 @@ Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using
 > - Use minimalist, monochrome symbols or Lucide-style line glyphs (`⌕` search, `⊞` folder, `▣` media, `▷` play, `⚙` settings, `×` close, `✓` check, `‹` / `›` chevrons, `↑` / `↓` arrows).
 > - All icons inherit theme text tokens (`theme.text_secondary`, `theme.text_muted`, `theme.accent`) without OS-native emoji color overrides.
 
-#### Stage 1: Dashboard View (`dash`) 🎯 (Next)
+#### Stage 1: Dashboard View (`dash`) ✅ (Completed)
 
-- [ ] **Step UI-1.1**: Build dedicated `src/components/dashboard_view.rs` with clean monochrome iconography.
-- [ ] **Step UI-1.2**: Storage overview hero card:
-  - Mounted volume name, filesystem type, mount point path.
-  - Used vs free space with high-density progress bar and percentage badge.
-  - Monochrome volume status indicator (`● Active` / `○ Unmounted`).
-- [ ] **Step UI-1.3**: Quick Action cards:
-  - `Discover & Scan`: Direct navigation to scan folders.
-  - `New Album`: Opens `CreateAlbumModal`.
-  - `Browse Library`: Navigates to flat catalog.
-  - `Rescan Drive`: Quick library verification.
-- [ ] **Step UI-1.4**: Media Distribution & Metrics Breakdown:
-  - Total Photos vs Videos count & cumulative disk space footprint.
-  - Total Albums indexed with clean metric cards.
-- [ ] **Step UI-1.5**: "Recently Added Media" preview strip:
-  - Displays the last 6-8 cataloged items with hover previews.
-  - Clicking any preview item launches `MediaPlayerModal`.
-- [ ] **Step UI-1.6**: Disconnected / zero-drive empty state with guidance to connect removable storage.
+- [x] **Step UI-1.1**: Build dedicated `src/components/dashboard_view.rs` with clean monochrome iconography.
+- [x] **Step UI-1.2**: Storage overview hero card based on reference design:
+  - Mounted volume name, total storage, mount path, album folder path.
+  - Used percentage progress bar with capacity tracking.
+  - Monochrome volume status indicator (`● Mounted`).
+  - Action buttons (`Scan Volume`, `Eject`).
+- [x] **Step UI-1.3**: Middle row 3 metric cards (`TOTAL MEDIA ITEMS`, `TOTAL ALBUMS`, `STORAGE USED`).
+- [x] **Step UI-1.4**: \"Recently Added Media\" preview strip with direct player launch on click and `View All Media →` navigation.
+- [x] **Step UI-1.5**: \"Recent Albums\" preview card strip with direct album selection on click and `View All Albums →` navigation.
+- [x] **Step UI-1.6**: Compact unmounted state with significantly smaller welcome banner and connected drive selector card.
 
-#### Stage 2: Discover & Scanner View (`discover`)
+#### Stage 2: Discover & Scanner View (`discover`) 🎯 (Next)
 
 - [ ] **Step UI-2.1**: Target drive summary banner with quick scan scope indicators.
 - [ ] **Step UI-2.2**: Ignore pattern management interface:

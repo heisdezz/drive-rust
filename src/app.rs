@@ -1,6 +1,7 @@
 use gpui_kit::*;
 use crate::state::app_state::{AppRoute, AppState};
 use crate::components::sidebar::render_sidebar;
+use crate::components::dashboard_view::render_dashboard_view;
 use crate::components::media_grid::render_media_grid;
 use crate::components::album_grid::render_album_grid;
 use crate::components::album_modal::{
@@ -44,7 +45,6 @@ impl Render for AppView {
         let state_theme = self.app_state.clone();
 
         div()
-            .relative()
             .flex()
             .w_full()
             .h_full()
@@ -274,6 +274,7 @@ fn render_route_content(
     let theme = state.theme;
 
     match route {
+        AppRoute::Dashboard => div().w_full().h_full().child(render_dashboard_view(app_state, window, cx)),
         AppRoute::Discover => div().w_full().h_full().child(render_discover_view(app_state, window, cx)),
         AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
         AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)),
@@ -391,31 +392,8 @@ fn render_route_content(
                                 div()
                                     .mt(px(4.0))
                                     .text_xs()
-                                    .text_color(theme.text_secondary)
-                                    .child("SQLite 3 with WAL & Direct Triggers"),
-                            ),
-                    )
-                    .child(
-                        div()
-                            .flex_1()
-                            .p(px(12.0))
-                            .rounded(px(6.0))
-                            .bg(theme.bg_sidebar)
-                            .border_1()
-                            .border_color(theme.border_subtle)
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .font_weight(FontWeight::MEDIUM)
-                                    .text_color(theme.text_muted)
-                                    .child("ACTIVE THEME"),
-                            )
-                            .child(
-                                div()
-                                    .mt(px(4.0))
-                                    .text_xs()
                                     .text_color(theme.accent)
-                                    .child(format!("{} {}", theme.mode.icon(), theme.name())),
+                                    .child("Embedded SQLite via rusqlite (WAL mode)"),
                             ),
                     ),
             ),

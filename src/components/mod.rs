@@ -1,6 +1,7 @@
 pub mod album_card;
 pub mod album_grid;
 pub mod album_modal;
+pub mod dashboard_view;
 pub mod discover_view;
 pub mod drive_card;
 pub mod filter_bar;
@@ -14,6 +15,7 @@ pub mod theme_picker;
 pub use album_card::*;
 pub use album_grid::*;
 pub use album_modal::*;
+pub use dashboard_view::*;
 pub use discover_view::*;
 pub use drive_card::*;
 pub use filter_bar::*;

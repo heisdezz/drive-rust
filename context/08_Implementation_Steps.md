@@ -1,19 +1,12 @@
 ---
-title:---
 title: Implementation Steps & Progress
 tags: [roadmap, implementation, tracking]
 created: 2026-10-31
 ---
 
-Steps & Progress
-tags: [roadmap, implementation, tracking]
-created: 2026-10-31
+## Implementation Steps & Progress
 
----
-
-## Implementation Steps & ProgressImplementation Steps & Progress
-
-ThisThis checklist tracks the step-by-step progress of the portchecklist tracks the step-by-step progress of the port from Electrobun to Rust ++ GPUI.
+This checklist tracks the step-by-step progress of the port from Electrobun to Rust + GPUI.
 
 ---
 
@@ -31,54 +24,29 @@ ThisThis checklist tracks the step-by-step progress of the portchecklist tracks 
 
 ---
 
-### UI Page-by-Page Polish Roadmap ✅Current Focus
+### UI Page-by-Page Polish Roadmap (Current Focus)
 
-- [x] **Step 9.1: Build `MediaPlayerModal`**
-  - Implemented `src/components/media_player.rs`:
-    - Compact Zed 38px titlebar with filename, type badge, and action buttons (`📁 Move`, `🗑 Delete`, `ℹ Info`, `✕ Close`).
-    - Left/Right sequential neighbor navigation (`◀ Prev` / `▶ Next`) seeking records via `db.get_media_item_with_neighbors`.
-    - Sleek video player canvas with playback controls mockup (Play/Pause, duration timeline, seeker bar, audio/fullscreen toggles).
-    - Image viewer canvas with resolution, size, and MIME badges.
-    - Collapsible EXIF metadata drawer showing filename, album path, original source, file size, MIME type, catalog date, full disk path, and SHA-256 hash.
-- [x] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
-  - Implemented `src/components/move_modal.rs` (`render_move_to_album_modal`):
-    - Target album selector with folder icons and media count metrics.
-    - Atomic file move across album directories on disk with collision resolution.
-    - Synchronized SQLite catalog update via `update_media_album_and_path`.
-    - Wired to bulk action toolbar in `MediaGrid` and `MediaPlayerModal`.
-  - Implemented `render_merge_album_modal` in `src/components/album_modal.rs`:
-    - Merges all physical files from source album directory into target album directory.
-    - Calls `db.merge_albums` and updates all album counts.
-- [x] **Step 9.3: Build `DeleteAlbumModal`**
-  - Implemented `render_delete_album_modal` in `src/components/album_modal.rs`: - Interactive radio selection between: 1. Safe Preservation (moves files to `unknown` album, preserves physical files on disk). 2. Permanent Deletion (permanently removes directory from disk and records from SQLite).
-    > [!IMPORTANT]
-    > **Design Constraint: Strict Monochrome Iconography**
-    >
-    > - **Zero colored emojis** across all pages and modals.
-    > - Use minimalist, monochrome symbols or Lucide-style line glyphs (`⌕` search, `⊞` folder, `▣` media, `▷` play, `⚙` settings, `×` close, `✓` check, `‹` / `›` chevrons, `↑` / `↓` arrows).
-    > - All icons inherit theme text tokens (`theme.text_secondary`, `theme.text_muted`, `theme.accent`) without OS-native emoji color overrides.
+> [!IMPORTANT]
+> **Design Constraint: Strict Monochrome Iconography**
+>
+> - **Zero colored emojis** across all pages and modals.
+> - Use minimalist, monochrome symbols or Lucide-style line glyphs (`⌕` search, `⊞` folder, `▣` media, `▷` play, `⚙` settings, `×` close, `✓` check, `‹` / `›` chevrons, `↑` / `↓` arrows).
+> - All icons inherit theme text tokens (`theme.text_secondary`, `theme.text_muted`, `theme.accent`) without OS-native emoji color overrides.
 
-#### Stage 1: Dashboard View (`dash`) 🎯 (Next)
+#### Stage 1: Dashboard View (`dash`) ✅ (Completed)
 
-- [ ] **Step UI-1.1**: Build dedicated `src/components/dashboard_view.rs` with clean monochrome iconography.
-- [ ] **Step UI-1.2**: Storage overview hero card:
-  - Mounted volume name, filesystem type, mount point path.
-  - Used vs free space with high-density progress bar and percentage badge.
-  - Monochrome volume status indicator (`● Active` / `○ Unmounted`).
-- [ ] **Step UI-1.3**: Quick Action cards:
-  - `Discover & Scan`: Direct navigation to scan folders.
-  - `New Album`: Opens `CreateAlbumModal`.
-  - `Browse Library`: Navigates to flat catalog.
-  - `Rescan Drive`: Quick library verification.
-- [ ] **Step UI-1.4**: Media Distribution & Metrics Breakdown:
-  - Total Photos vs Videos count & cumulative disk space footprint.
-  - Total Albums indexed with clean metric cards.
-- [ ] **Step UI-1.5**: "Recently Added Media" preview strip:
-  - Displays the last 6-8 cataloged items with hover previews.
-  - Clicking any preview item launches `MediaPlayerModal`.
-- [ ] **Step UI-1.6**: Disconnected / zero-drive empty state with guidance to connect removable storage.
+- [x] **Step UI-1.1**: Build dedicated `src/components/dashboard_view.rs` with clean monochrome iconography.
+- [x] **Step UI-1.2**: Storage overview hero card based on reference design:
+  - Mounted volume name, total storage, mount path, album folder path.
+  - Used percentage progress bar with capacity tracking.
+  - Monochrome volume status indicator (`● Mounted`).
+  - Action buttons (`Scan Volume`, `Eject`).
+- [x] **Step UI-1.3**: Middle row 3 metric cards (`TOTAL MEDIA ITEMS`, `TOTAL ALBUMS`, `STORAGE USED`).
+- [x] **Step UI-1.4**: \"Recently Added Media\" preview strip with direct player launch on click and `View All Media →` navigation.
+- [x] **Step UI-1.5**: \"Recent Albums\" preview card strip with direct album selection on click and `View All Albums →` navigation.
+- [x] **Step UI-1.6**: Compact unmounted state with significantly smaller welcome banner and connected drive selector card.
 
-#### Stage 2: Discover & Scanner View (`discover`)
+#### Stage 2: Discover & Scanner View (`discover`) 🎯 (Next)
 
 - [ ] **Step UI-2.1**: Target drive summary banner with quick scan scope indicators.
 - [ ] **Step UI-2.2**: Ignore pattern management interface:
@@ -129,7 +97,7 @@ ThisThis checklist tracks the step-by-step progress of the portchecklist tracks 
 
 ---
 
-### Phase 10: End-to-End Polish & Release Verification (Next)
+### Phase 10: End-to-End Polish & Release Verification
 
 - [ ] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
 - [ ] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, snapshot recovery from `.backups/`).
