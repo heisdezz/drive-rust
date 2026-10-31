@@ -57,21 +57,22 @@ Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using
 
 ---
 
-### Phase 8: Component 4: Media Scanner & Relocator (Next)
+### Phase 8: Component 4: Media Scanner & Relocator ✅
 
-- [ ] **Step 8.1: Directory Crawler & Ignore Engine**
-  - Implement `src/scanner/walker.rs` with folder stack traversal and ignore list pattern matching.
-- [ ] **Step 8.2: Safe Relocator & Collision Resolver**
-  - Implement `src/scanner/relocator.rs` (folder-to-album mapping, atomic move, collision suffixing `photo_1.jpg`, SQLite batch insert).
-- [ ] **Step 8.3: Build `DiscoverView` Scanner UI**
-  - Folder picker, preset ignore buttons (`+ temp`, `+ raw`, `+ cache`), live progress counters, start/pause/stop controls.
+- [x] **Step 8.1: Directory Crawler & Ignore Engine**
+  - Implemented `src/scanner/walker.rs` with iterative directory walker, ignore rules, and media classification.
+- [x] **Step 8.2: Safe Relocator & Collision Resolver**
+  - Implemented `src/scanner/relocator.rs` with collision suffix resolution (`photo_1.jpg`), atomic file moves (`fs::rename` with copy-delete fallback), album detection, and SQLite insertions.
+- [x] **Step 8.3: Build `DiscoverView` Scanner UI**
+  - Implemented `src/components/discover_view.rs` with volume status, ignore list manager with quick presets (`+ temp`, `+ cache`, etc.), live scan metrics, and background asynchronous scan invocation via `cx.spawn`.
+  - Added thread-safe `Mutex<Connection>` to `LibraryDatabase` in `src/db/mod.rs`.
 
 ---
 
-### Phase 9: Component 5: Media Player & Advanced Dialogs
+### Phase 9: Component 5: Media Player & Advanced Dialogs (Next)
 
 - [ ] **Step 9.1: Build `MediaPlayerModal`**
-  - Full-screen high-res preview, arrow key seek navigation, zoom/pan, and EXIF metadata panel.
+  - Full-screen high-res preview, arrow key seek navigation (`Prev` / `Next`), zoom/fit controls, and EXIF metadata drawer.
 - [ ] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
   - Searchable destination album picker, atomic file moves, database record updates.
 - [ ] **Step 9.3: Build `DeleteAlbumModal`**

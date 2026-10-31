@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
-use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, SortOrder};
+use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, ScanProgress, SortOrder};
 use crate::theme::{AppTheme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -54,6 +54,10 @@ pub struct AppState {
     pub show_create_album_modal: bool,
     pub editing_album: Option<Album>,
 
+    // Scanner & Ignore List State
+    pub scan_progress: ScanProgress,
+    pub user_ignore_patterns: Vec<String>,
+
     // Media Catalog View State
     pub media_filter: MediaFilterType,
     pub media_sort_by: MediaSortBy,
@@ -78,6 +82,14 @@ impl AppState {
             selected_album_id: None,
             show_create_album_modal: false,
             editing_album: None,
+
+            scan_progress: ScanProgress::default(),
+            user_ignore_patterns: vec![
+                "temp".to_string(),
+                "cache".to_string(),
+                "raw_dumps".to_string(),
+                "thumbnails".to_string(),
+            ],
 
             media_filter: MediaFilterType::All,
             media_sort_by: MediaSortBy::Date,
@@ -120,6 +132,26 @@ impl AppState {
 
     pub fn close_edit_album_modal(&mut self) {
         self.editing_album = None;
+    }
+
+    // Scanner actions
+    pub fn add_ignore_pattern(&mut self, pattern: &str) {
+        let trimmed = pattern.trim().to_lowercase();
+        if !trimmed.is_empty() && !self.user_ignore_patterns.iter().any(|p| p.to_lowercase() == trimmed) {
+            self.user_ignore_patterns.push(trimmed);
+        }
+    }
+
+    pub fn remove_ignore_pattern(&mut self, pattern: &str) {
+        self.user_ignore_patterns.retain(|p| p.to_lowercase() != pattern.to_lowercase());
+    }
+
+    pub fn update_scan_progress(&mut self, progress: ScanProgress) {
+        self.scan_progress = progress;
+    }
+
+    pub fn reset_scan_progress(&mut self) {
+        self.scan_progress = ScanProgress::default();
     }
 
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
@@ -234,5 +266,17 @@ mod tests {
 
         state.close_create_album_modal();
         assert!(!state.show_create_album_modal);
+    }
+
+    #[test]
+    fn test_scanner_ignore_patterns() {
+        let mut state = AppState::new();
+        assert!(state.user_ignore_patterns.contains(&"temp".to_string()));
+
+        state.add_ignore_pattern("build_artifacts");
+        assert!(state.user_ignore_patterns.contains(&"build_artifacts".to_string()));
+
+        state.remove_ignore_pattern("temp");
+        assert!(!state.user_ignore_patterns.contains(&"temp".to_string()));
     }
 }

@@ -55,20 +55,35 @@ Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using
     - `render_create_album_modal`: Quick presets (`Vacation`, `Family`, `Screenshots`, `Wallpapers`, etc.), physical disk directory creation, and SQLite insertion.
     - `render_edit_album_modal`: Album deletion with safe fallback to `unknown` album.
 
+### Phase 8: Component 4: Media Scanner & Relocator ✅
+
+- [x] **Step 8.1: Directory Crawler & Ignore Engine**
+  - Implemented `src/scanner/walker.rs`:
+    - Iterative folder stack crawler (`crawl_directory`).
+    - Media file extension classification for images (`jpg`, `png`, `webp`, `gif`, `heic`, `avif`, `raw`, etc.) and videos (`mp4`, `mkv`, `mov`, `webm`, `avi`, etc.).
+    - System ignore filter (`albums/`, `.*` hidden files/folders, `node_modules/`, `build/`, `dist/`, `$RECYCLE.BIN/`, `lost+found/`).
+    - Dynamic user ignore pattern matching with presets (`temp`, `cache`, `raw_dumps`, `backups`, `downloads`, `exports`).
+    - Unit tests: `test_is_media_file`, `test_is_path_ignored`.
+- [x] **Step 8.2: Safe Relocator & Collision Resolver**
+  - Implemented `src/scanner/relocator.rs`:
+    - Non-destructive naming collision handler (`resolve_collision`) creating numbered suffixes (`photo_1.jpg`, `photo_2.jpg`).
+    - Automatic album derivation from folder relative path (root files -> `albums/unknown/`, subdirectories -> `albums/<folder>/`).
+    - Atomic move via `fs::rename` with cross-device copy-then-delete fallback.
+    - Automatic album creation and `NewMediaItem` SQLite record insertion.
+    - Made `LibraryDatabase` thread-safe (`Mutex<Connection>`) for async background task execution.
+    - Unit test: `test_resolve_collision`.
+- [x] **Step 8.3: Build `DiscoverView` Scanner UI**
+  - Implemented `src/components/discover_view.rs`:
+    - Target Drive & Mount summary card.
+    - Interactive Ignore Pattern manager (preset pills `+ temp`, `+ cache`, etc. and removable active chips `✕`).
+    - Real-time scanner metrics card (`Files Crawled`, `Media Cataloged`, `Active Ignore Filters`, `Current Folder`).
+    - Async background scanner execution (`cx.spawn`) that keeps UI completely responsive.
+    - Wired to `AppRoute::Discover` in `src/app.rs`.
+  - Unit test: `test_scanner_ignore_patterns`.
+
 ---
 
-### Phase 8: Component 4: Media Scanner & Relocator (Next)
-
-- [ ] **Step 8.1: Directory Crawler & Ignore Engine**
-  - Implement `src/scanner/walker.rs` with folder stack traversal and ignore list pattern matching.
-- [ ] **Step 8.2: Safe Relocator & Collision Resolver**
-  - Implement `src/scanner/relocator.rs` (folder-to-album mapping, atomic move, collision suffixing `photo_1.jpg`, SQLite batch insert).
-- [ ] **Step 8.3: Build `DiscoverView` Scanner UI**
-  - Folder picker, preset ignore buttons (`+ temp`, `+ raw`, `+ cache`), live progress counters, start/pause/stop controls.
-
----
-
-### Phase 9: Component 5: Media Player & Advanced Dialogs
+### Phase 9: Component 5: Media Player & Advanced Dialogs (Next)
 
 - [ ] **Step 9.1: Build `MediaPlayerModal`**
   - Full-screen high-res preview, arrow key seek navigation, zoom/pan, and EXIF metadata panel.

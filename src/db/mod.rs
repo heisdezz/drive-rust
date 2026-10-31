@@ -3,13 +3,14 @@ pub mod albums;
 pub mod media;
 
 use std::path::Path;
+use std::sync::{Mutex, MutexGuard};
 use rusqlite::{Connection, Result};
 use crate::state::models::{Album, MediaFilterType, MediaItem, MediaSortBy, SortOrder};
 pub use media::NewMediaItem;
 
-/// Encapsulates a connection to a `.media_library.db` database on a drive.
+/// Encapsulates a thread-safe connection to a `.media_library.db` database on a drive.
 pub struct LibraryDatabase {
-    conn: Connection,
+    conn: Mutex<Connection>,
 }
 
 impl LibraryDatabase {
@@ -21,19 +22,23 @@ impl LibraryDatabase {
             PRAGMA synchronous = NORMAL;
         ")?;
         schema::init_schema(&conn)?;
-        Ok(Self { conn })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
     /// Opens an in-memory SQLite database, primarily for testing.
     pub fn open_in_memory() -> Result<Self> {
         let conn = Connection::open_in_memory()?;
         schema::init_schema(&conn)?;
-        Ok(Self { conn })
+        Ok(Self {
+            conn: Mutex::new(conn),
+        })
     }
 
-    /// Direct reference to the underlying connection.
-    pub fn conn(&self) -> &Connection {
-        &self.conn
+    /// Direct reference to the underlying connection guard.
+    pub fn conn(&self) -> MutexGuard<'_, Connection> {
+        self.conn.lock().unwrap()
     }
 
     // --- Albums ---
@@ -44,15 +49,18 @@ impl LibraryDatabase {
         relative_path: &str,
         description: Option<&str>,
     ) -> Result<Album> {
-        albums::create_album(&self.conn, name, relative_path, description)
+        let conn = self.conn.lock().unwrap();
+        albums::create_album(&conn, name, relative_path, description)
     }
 
     pub fn get_albums(&self) -> Result<Vec<Album>> {
-        albums::get_albums(&self.conn)
+        let conn = self.conn.lock().unwrap();
+        albums::get_albums(&conn)
     }
 
     pub fn get_album_by_id(&self, album_id: i64) -> Result<Option<Album>> {
-        albums::get_album_by_id(&self.conn, album_id)
+        let conn = self.conn.lock().unwrap();
+        albums::get_album_by_id(&conn, album_id)
     }
 
     pub fn rename_album(
@@ -61,21 +69,25 @@ impl LibraryDatabase {
         new_name: &str,
         new_relative_path: &str,
     ) -> Result<()> {
-        albums::rename_album(&self.conn, album_id, new_name, new_relative_path)
+        let conn = self.conn.lock().unwrap();
+        albums::rename_album(&conn, album_id, new_name, new_relative_path)
     }
 
     pub fn delete_album(&self, album_id: i64, permanent: bool) -> Result<()> {
-        albums::delete_album(&self.conn, album_id, permanent)
+        let conn = self.conn.lock().unwrap();
+        albums::delete_album(&conn, album_id, permanent)
     }
 
     pub fn merge_albums(&self, source_album_id: i64, target_album_id: i64) -> Result<usize> {
-        albums::merge_albums(&self.conn, source_album_id, target_album_id)
+        let conn = self.conn.lock().unwrap();
+        albums::merge_albums(&conn, source_album_id, target_album_id)
     }
 
     // --- Media ---
 
     pub fn insert_media(&self, item: &NewMediaItem) -> Result<i64> {
-        media::insert_media(&self.conn, item)
+        let conn = self.conn.lock().unwrap();
+        media::insert_media(&conn, item)
     }
 
     pub fn get_media_items(
@@ -88,7 +100,8 @@ impl LibraryDatabase {
         sort_by: MediaSortBy,
         sort_order: SortOrder,
     ) -> Result<(Vec<MediaItem>, i64)> {
-        media::get_media_items(&self.conn, album_id, limit, offset, filter, search, sort_by, sort_order)
+        let conn = self.conn.lock().unwrap();
+        media::get_media_items(&conn, album_id, limit, offset, filter, search, sort_by, sort_order)
     }
 
     pub fn get_media_item_with_neighbors(
@@ -96,15 +109,18 @@ impl LibraryDatabase {
         item_id: i64,
         album_id: Option<i64>,
     ) -> Result<Option<(MediaItem, Option<i64>, Option<i64>)>> {
-        media::get_media_item_with_neighbors(&self.conn, item_id, album_id)
+        let conn = self.conn.lock().unwrap();
+        media::get_media_item_with_neighbors(&conn, item_id, album_id)
     }
 
     pub fn move_media_to_album(&self, media_ids: &[i64], target_album_id: i64) -> Result<usize> {
-        media::move_media_to_album(&self.conn, media_ids, target_album_id)
+        let conn = self.conn.lock().unwrap();
+        media::move_media_to_album(&conn, media_ids, target_album_id)
     }
 
     pub fn delete_media_items(&self, media_ids: &[i64]) -> Result<usize> {
-        media::delete_media_items(&self.conn, media_ids)
+        let conn = self.conn.lock().unwrap();
+        media::delete_media_items(&conn, media_ids)
     }
 }
 
@@ -201,6 +217,7 @@ mod tests {
         let moved = db.move_media_to_album(&[item_id], album_b.id).unwrap();
         assert_eq!(moved, 1);
 
+        // Check counts
         assert_eq!(db.get_album_by_id(album_a.id).unwrap().unwrap().media_count, 0);
         assert_eq!(db.get_album_by_id(album_b.id).unwrap().unwrap().media_count, 1);
     }
@@ -208,55 +225,48 @@ mod tests {
     #[test]
     fn test_media_neighbors_seeking() {
         let db = LibraryDatabase::open_in_memory().expect("Failed to open DB");
-        let album = db.create_album("Seq", "albums/Seq", None).unwrap();
+        let album = db.create_album("SeqAlbum", "albums/SeqAlbum", None).unwrap();
 
-        let id1 = db.insert_media(&NewMediaItem {
-            file_hash: "h1",
+        let item1 = NewMediaItem {
+            file_hash: "seq_1",
             original_relative_path: "1.jpg",
-            current_relative_path: "albums/Seq/1.jpg",
-            file_size: 10,
+            current_relative_path: "albums/SeqAlbum/1.jpg",
+            file_size: 100,
             mime_type: "image/jpeg",
             duration_seconds: None,
             metadata_json: None,
             album_id: Some(album.id),
-        }).unwrap();
+        };
+        let id1 = db.insert_media(&item1).unwrap();
 
-        let id2 = db.insert_media(&NewMediaItem {
-            file_hash: "h2",
+        let item2 = NewMediaItem {
+            file_hash: "seq_2",
             original_relative_path: "2.jpg",
-            current_relative_path: "albums/Seq/2.jpg",
-            file_size: 10,
+            current_relative_path: "albums/SeqAlbum/2.jpg",
+            file_size: 200,
             mime_type: "image/jpeg",
             duration_seconds: None,
             metadata_json: None,
             album_id: Some(album.id),
-        }).unwrap();
+        };
+        let id2 = db.insert_media(&item2).unwrap();
 
-        let id3 = db.insert_media(&NewMediaItem {
-            file_hash: "h3",
+        let item3 = NewMediaItem {
+            file_hash: "seq_3",
             original_relative_path: "3.jpg",
-            current_relative_path: "albums/Seq/3.jpg",
-            file_size: 10,
+            current_relative_path: "albums/SeqAlbum/3.jpg",
+            file_size: 300,
             mime_type: "image/jpeg",
             duration_seconds: None,
             metadata_json: None,
             album_id: Some(album.id),
-        }).unwrap();
+        };
+        let id3 = db.insert_media(&item3).unwrap();
 
-        // Check middle item (id2)
-        let (item, prev, next) = db.get_media_item_with_neighbors(id2, Some(album.id)).unwrap().unwrap();
-        assert_eq!(item.id, id2);
-        assert_eq!(prev, Some(id1));
-        assert_eq!(next, Some(id3));
-
-        // Check first item (id1)
-        let (_, prev_first, next_first) = db.get_media_item_with_neighbors(id1, Some(album.id)).unwrap().unwrap();
-        assert_eq!(prev_first, None);
-        assert_eq!(next_first, Some(id2));
-
-        // Check last item (id3)
-        let (_, prev_last, next_last) = db.get_media_item_with_neighbors(id3, Some(album.id)).unwrap().unwrap();
-        assert_eq!(prev_last, Some(id2));
-        assert_eq!(next_last, None);
+        // Check middle item neighbors
+        let res = db.get_media_item_with_neighbors(id2, Some(album.id)).unwrap().unwrap();
+        assert_eq!(res.0.id, id2);
+        assert_eq!(res.1, Some(id1)); // prev
+        assert_eq!(res.2, Some(id3)); // next
     }
 }

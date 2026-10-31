@@ -4,6 +4,7 @@ use crate::components::sidebar::render_sidebar;
 use crate::components::media_grid::render_media_grid;
 use crate::components::album_grid::render_album_grid;
 use crate::components::album_modal::{render_create_album_modal, render_edit_album_modal};
+use crate::components::discover_view::render_discover_view;
 use crate::components::theme_picker::render_theme_picker;
 
 pub struct AppView {
@@ -217,6 +218,7 @@ fn render_route_content(
     let theme = state.theme;
 
     match route {
+        AppRoute::Discover => div().w_full().h_full().child(render_discover_view(app_state, window, cx)),
         AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
         AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)),
         AppRoute::Settings => div()
@@ -280,7 +282,7 @@ fn render_route_content(
                             .text_color(theme.text_muted)
                             .child(match route {
                                 AppRoute::Dashboard => "Welcome to Rust Drive. Select an external storage drive from the sidebar to inspect or organize its media library.",
-                                AppRoute::Discover => "Scan storage drives, configure folder ignore patterns, and auto-catalog media files into albums.",
+                                AppRoute::Discover => "",
                                 AppRoute::Medias => "Browse, filter, and search media files indexed on the active external drive.",
                                 AppRoute::Albums => "Manage physical album directories, view media counts, and merge or edit albums.",
                                 AppRoute::Settings => "",

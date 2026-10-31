@@ -3,6 +3,7 @@
 pub mod state;
 pub mod db;
 pub mod drives;
+pub mod scanner;
 pub mod components;
 pub mod theme;
 pub mod app;
