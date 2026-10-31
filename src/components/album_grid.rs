@@ -226,6 +226,7 @@ pub fn render_album_grid(
                 sort_by,
                 sort_order,
                 total_count,
+                None,
                 &theme,
                 on_filter,
                 on_sort,
@@ -235,6 +236,8 @@ pub fn render_album_grid(
                         cx.notify();
                     });
                 },
+                None,
+                None,
             ))
             // Step UI-4.5: Floating bulk selection toolbar when items are selected
             .child(

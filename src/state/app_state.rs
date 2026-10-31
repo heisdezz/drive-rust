@@ -68,6 +68,7 @@ pub struct AppState {
     pub media_filter: MediaFilterType,
     pub media_sort_by: MediaSortBy,
     pub media_sort_order: SortOrder,
+    pub media_search_query: String,
     pub media_page: usize,
     pub media_page_size: usize,
     pub selected_media_ids: HashSet<i64>,
@@ -121,6 +122,7 @@ impl AppState {
             media_filter: MediaFilterType::All,
             media_sort_by: MediaSortBy::Date,
             media_sort_order: SortOrder::Desc,
+            media_search_query: String::new(),
             media_page: 1,
             media_page_size: 24,
             selected_media_ids: HashSet::new(),
@@ -139,7 +141,7 @@ impl AppState {
             custom_library_path: None,
             grid_columns: 6,
             show_video_test_modal: false,
-            test_video_url: "http://127.0.0.1:8080/stream/4k_landscape.mp4".to_string(),
+            test_video_url: "/run/media/destiny/Ventoy/sample.mp4".to_string(),
         }
     }
 
@@ -333,7 +335,25 @@ impl AppState {
     }
 
     pub fn set_custom_library_path(&mut self, path: Option<PathBuf>) {
-        self.custom_library_path = path;
+        self.custom_library_path = path.clone();
+        if let Some(ref custom) = path {
+            let name = custom
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| "Custom Library".to_string());
+            let custom_drive = DriveInfo {
+                id: format!("custom_{}", custom.display()),
+                name,
+                drive_type: DriveType::External,
+                mount_path: custom.clone(),
+                size_formatted: "Custom Directory".to_string(),
+                used_percentage: 0,
+                is_mounted: true,
+            };
+            self.selected_drive = Some(custom_drive);
+            self.selected_album_id = None;
+            self.selected_media_ids.clear();
+        }
         self.reopen_database();
     }
 
@@ -371,6 +391,16 @@ impl AppState {
             SortOrder::Asc => SortOrder::Desc,
             SortOrder::Desc => SortOrder::Asc,
         };
+    }
+
+    pub fn set_media_search_query(&mut self, query: String) {
+        self.media_search_query = query;
+        self.media_page = 1;
+    }
+
+    pub fn clear_media_search_query(&mut self) {
+        self.media_search_query.clear();
+        self.media_page = 1;
     }
 
     pub fn set_media_page(&mut self, page: usize) {
@@ -586,5 +616,22 @@ mod tests {
 
         state.toggle_player_zoom_fit();
         assert!(!state.player_zoom_fit);
+    }
+
+    #[test]
+    fn test_media_search_query_state() {
+        let mut state = AppState::new();
+        state.set_media_page(3);
+        assert_eq!(state.media_search_query, "");
+        assert_eq!(state.media_page, 3);
+
+        state.set_media_search_query("family".to_string());
+        assert_eq!(state.media_search_query, "family");
+        assert_eq!(state.media_page, 1);
+
+        state.set_media_page(5);
+        state.clear_media_search_query();
+        assert_eq!(state.media_search_query, "");
+        assert_eq!(state.media_page, 1);
     }
 }

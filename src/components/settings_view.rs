@@ -1,46 +1,38 @@
+use crate::components::folder_picker::prompt_mount_custom_folder;
 use gpui_kit::*;
-use gpui_kit::PathPromptOptions;
-use std::path::PathBuf;
 use crate::state::app_state::AppState;
-use crate::components::theme_picker::render_theme_picker;
+use crate::theme::ThemeMode;
 use crate::theme::icons::Icon;
 
-/// Renders the complete, polished Settings & Preferences page with folder picker support.
+/// Renders the comprehensive Settings, Library Location & Drive Management view.
 pub fn render_settings_view(
     app_state: &Entity<AppState>,
-    window: &mut Window,
+    _window: &mut Window,
     cx: &mut App,
 ) -> impl IntoElement {
     let state = app_state.read(cx);
     let theme = state.theme;
-    let selected_drive = state.selected_drive.clone();
     let custom_path = state.custom_library_path.clone();
     let grid_cols = state.grid_columns;
+    let selected_drive = state.selected_drive.clone();
     let db_connected = state.active_db.is_some();
+    let drives = state.drives.clone();
 
-    let state_test_modal = app_state.clone();
+    let state_theme = app_state.clone();
+    let state_grid = app_state.clone();
     let state_reset_loc = app_state.clone();
-    let state_custom_loc = app_state.clone();
     let state_eject = app_state.clone();
-
-    let active_library_display = if let Some(ref custom) = custom_path {
-        custom.display().to_string()
-    } else if let Some(ref drive) = selected_drive {
-        drive.mount_path.join("albums").display().to_string()
-    } else {
-        "No storage volume selected".to_string()
-    };
+    let state_video_test = app_state.clone();
 
     div()
-        .id(SharedString::from("settings-scroll-view"))
+        .id(SharedString::from("settings-view-container"))
         .flex()
         .flex_col()
         .gap(px(14.0))
         .w_full()
         .h_full()
         .overflow_y_scroll()
-        .pb(px(24.0))
-        // Top Banner / Page Header
+        // Top Header Bar
         .child(
             div()
                 .p(px(14.0))
@@ -54,58 +46,62 @@ pub fn render_settings_view(
                 .child(
                     div()
                         .flex()
-                        .flex_col()
-                        .gap(px(2.0))
+                        .items_center()
+                        .gap(px(10.0))
                         .child(
                             div()
-                                .flex()
-                                .items_center()
-                                .gap(px(8.0))
-                                .child(div().text_sm().text_color(theme.accent).child(Icon::SETTINGS))
-                                .child(
-                                    div()
-                                        .text_sm()
-                                        .font_weight(FontWeight::BOLD)
-                                        .text_color(theme.text_primary)
-                                        .child("Preferences & Storage Settings"),
-                                ),
+                                .text_base()
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.text_primary)
+                                .child(format!("{} Application Settings & System Management", Icon::SETTINGS)),
                         )
                         .child(
                             div()
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(3.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_subtle)
                                 .text_xs()
-                                .text_color(theme.text_muted)
-                                .child("Configure library locations, theme appearance, catalog density, and hardware volumes."),
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.accent)
+                                .child("Native GPUI v0.1"),
                         ),
                 )
                 .child(
                     div()
-                        .id(SharedString::from("settings-open-video-test-btn"))
-                        .cursor_pointer()
-                        .px(px(10.0))
-                        .py(px(5.0))
-                        .rounded(px(4.0))
-                        .bg(theme.accent)
-                        .hover(move |s| s.bg(theme.accent_hover))
-                        .on_click(move |_, _, cx| {
-                            state_test_modal.update(cx, |s, cx| {
-                                s.open_video_test_modal();
-                                cx.notify();
-                            });
-                        })
                         .flex()
                         .items_center()
-                        .gap(px(6.0))
-                        .child(div().text_xs().text_color(rgb(0xffffff)).child(Icon::PLAY))
+                        .gap(px(8.0))
                         .child(
                             div()
-                                .text_xs()
-                                .font_weight(FontWeight::BOLD)
-                                .text_color(rgb(0xffffff))
-                                .child("Test Video URL"),
+                                .id(SharedString::from("open-video-test-btn"))
+                                .cursor_pointer()
+                                .px(px(8.0))
+                                .py(px(4.0))
+                                .rounded(px(4.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_card)
+                                .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
+                                .on_click(move |_, _, cx| {
+                                    state_video_test.update(cx, |s, cx| {
+                                        s.open_video_test_modal();
+                                        cx.notify();
+                                    });
+                                })
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_primary)
+                                        .child(format!("{} Video URL Canvas", Icon::VIDEO)),
+                                ),
                         ),
                 ),
         )
-        // 1. Appearance & Dynamic Theming
+        // Section 1: Appearance & Visual Themes
         .child(
             div()
                 .p(px(14.0))
@@ -125,19 +121,72 @@ pub fn render_settings_view(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(theme.text_muted)
-                                .child("THEME & COLOR PALETTE"),
+                                .text_color(theme.text_primary)
+                                .child("APPEARANCE & THEME PRESETS"),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .text_color(theme.text_muted)
-                                .child(format!("Active: {}", theme.name())),
+                                .child("Select from 5 calibrated dark & light workspace palettes"),
                         ),
                 )
-                .child(render_theme_picker(app_state, window, cx)),
+                .child(
+                    div()
+                        .flex()
+                        .flex_wrap()
+                        .gap(px(10.0))
+                        .children(ThemeMode::all().into_iter().map(|mode| {
+                            let is_active = *mode == state.theme_mode;
+                            let state_pick = state_theme.clone();
+                            let mode_copy = mode;
+
+                            div()
+                                .id(SharedString::from(format!("theme-card-{:?}", mode)))
+                                .cursor_pointer()
+                                .w(px(130.0))
+                                .p(px(8.0))
+                                .rounded(px(5.0))
+                                .bg(if is_active { theme.bg_pill_active } else { theme.bg_sidebar })
+                                .border_1()
+                                .border_color(if is_active { theme.accent } else { theme.border_subtle })
+                                .hover(move |s| s.border_color(theme.accent))
+                                .on_click(move |_, _, cx| {
+                                    state_pick.update(cx, |s, cx| {
+                                        s.set_theme_mode(*mode_copy);
+                                        cx.notify();
+                                    });
+                                })
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .justify_between()
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::MEDIUM })
+                                                .text_color(if is_active { theme.accent } else { theme.text_primary })
+                                                .child(mode.name()),
+                                        )
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .text_color(if is_active { theme.accent } else { theme.text_muted })
+                                                .child(if is_active { "●" } else { "○" }),
+                                        ),
+                                )
+                                .child(
+                                    div()
+                                        .mt(px(6.0))
+                                        .h(px(4.0))
+                                        .rounded(px(2.0))
+                                        .bg(if is_active { theme.accent } else { theme.border_card }),
+                                )
+                        })),
+                ),
         )
-        // 2. Library Location & Storage Root
+        // Section 2: Library Storage & Custom Folder Location
         .child(
             div()
                 .p(px(14.0))
@@ -150,10 +199,22 @@ pub fn render_settings_view(
                 .gap(px(10.0))
                 .child(
                     div()
-                        .text_xs()
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(theme.text_muted)
-                        .child("LIBRARY LOCATION & ALBUM ROOT"),
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .text_xs()
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.text_primary)
+                                .child("LIBRARY STORAGE LOCATION"),
+                        )
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(theme.text_muted)
+                                .child("Configure where SQLite catalog database and albums are saved"),
+                        ),
                 )
                 .child(
                     div()
@@ -174,15 +235,23 @@ pub fn render_settings_view(
                                     div()
                                         .text_xs()
                                         .font_weight(FontWeight::MEDIUM)
-                                        .text_color(theme.text_secondary)
-                                        .child("Active Media Directory:"),
+                                        .text_color(theme.text_muted)
+                                        .child("ACTIVE DATABASE PATH:"),
                                 )
                                 .child(
                                     div()
                                         .text_xs()
                                         .font_weight(FontWeight::SEMIBOLD)
                                         .text_color(theme.text_primary)
-                                        .child(active_library_display),
+                                        .child(
+                                            if let Some(ref p) = custom_path {
+                                                format!("{}/.media_library.db (Custom Override)", p.display())
+                                            } else if let Some(ref d) = selected_drive {
+                                                format!("{}/.media_library.db (Drive Root)", d.mount_path.display())
+                                            } else {
+                                                "None (No volume or folder selected)".to_string()
+                                            }
+                                        ),
                                 ),
                         )
                         .child(
@@ -191,95 +260,63 @@ pub fn render_settings_view(
                                 .items_center()
                                 .gap(px(6.0))
                                 .child(
-                                    div()
-                                        .id(SharedString::from("set-custom-lib-btn"))
-                                        .cursor_pointer()
-                                        .px(px(10.0))
-                                        .py(px(4.0))
-                                        .rounded(px(4.0))
-                                        .bg(theme.accent)
-                                        .text_color(rgb(0xffffff))
-                                        .hover(move |s| s.bg(theme.accent_hover))
-                                        .on_click(move |_, _, cx| {
-                                            let options = PathPromptOptions {
-                                                files: false,
-                                                directories: true,
-                                                multiple: false,
-                                                prompt: Some(SharedString::from("Select Media Library Directory")),
-                                            };
-                                            let receiver = cx.prompt_for_paths(options);
-                                            let state_clone = state_custom_loc.clone();
-
-                                            cx.spawn(|cx: &mut AsyncApp| {
-                                                let cx = cx.clone();
-                                                async move {
-                                                    // Try native portal picker first
-                                                    if let Ok(Ok(Some(paths))) = receiver.await {
-                                                        if let Some(first) = paths.into_iter().next() {
-                                                            cx.update(|cx: &mut App| {
-                                                                state_clone.update(cx, |s, cx| {
-                                                                    s.set_custom_library_path(Some(first));
-                                                                    cx.notify();
-                                                                });
-                                                            });
-                                                            return;
-                                                        }
-                                                    }
-
-                                                    // Gracefully fallback to zenity or kdialog if portal wasn't answered
-                                                    let fallback_path = cx
-                                                        .background_executor()
-                                                        .spawn(async move { pick_folder_fallback() })
-                                                        .await;
-
-                                                    if let Some(p) = fallback_path {
-                                                        cx.update(|cx: &mut App| {
-                                                            state_clone.update(cx, |s, cx| {
-                                                                s.set_custom_library_path(Some(p));
-                                                                cx.notify();
-                                                            });
-                                                        });
-                                                    }
-                                                }
+                                    // Native folder picker button via folder_picker helper
+                                    {
+                                        let app_state_prompt = app_state.clone();
+                                        div()
+                                            .id(SharedString::from("browse-library-folder-btn"))
+                                            .cursor_pointer()
+                                            .px(px(8.0))
+                                            .py(px(4.0))
+                                            .rounded(px(4.0))
+                                            .bg(theme.accent)
+                                            .hover(move |s| s.bg(theme.accent_hover))
+                                            .on_click(move |_, _, cx| {
+                                                prompt_mount_custom_folder(&app_state_prompt, cx);
                                             })
-                                            .detach();
-                                        })
-                                        .flex()
-                                        .items_center()
-                                        .gap(px(5.0))
-                                        .child(div().text_xs().child(Icon::FOLDER))
-                                        .child(
-                                            div()
-                                                .text_xs()
-                                                .font_weight(FontWeight::BOLD)
-                                                .child("Browse Folder..."),
-                                        ),
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::MEDIUM)
+                                                    .text_color(rgb(0xffffff))
+                                                    .child(format!("{} Browse Folder...", Icon::FOLDER)),
+                                            )
+                                    }
                                 )
                                 .child(
-                                    div()
-                                        .id(SharedString::from("reset-lib-btn"))
-                                        .cursor_pointer()
-                                        .px(px(8.0))
-                                        .py(px(4.0))
-                                        .rounded(px(4.0))
-                                        .bg(theme.bg_pill)
-                                        .border_1()
-                                        .border_color(theme.border_card)
-                                        .text_xs()
-                                        .text_color(theme.text_muted)
-                                        .hover(move |s| s.text_color(theme.text_primary))
-                                        .on_click(move |_, _, cx| {
-                                            state_reset_loc.update(cx, |s, cx| {
-                                                s.set_custom_library_path(None);
-                                                cx.notify();
-                                            });
-                                        })
-                                        .child("Reset to Drive Root"),
+                                    if custom_path.is_some() {
+                                        div()
+                                            .id(SharedString::from("reset-library-location-btn"))
+                                            .cursor_pointer()
+                                            .px(px(8.0))
+                                            .py(px(4.0))
+                                            .rounded(px(4.0))
+                                            .bg(theme.bg_pill)
+                                            .border_1()
+                                            .border_color(theme.border_card)
+                                            .hover(move |s| s.bg(theme.bg_card_hover).border_color(theme.accent))
+                                            .on_click(move |_, _, cx| {
+                                                state_reset_loc.update(cx, |s, cx| {
+                                                    s.set_custom_library_path(None);
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::MEDIUM)
+                                                    .text_color(theme.text_secondary)
+                                                    .child("Reset to Drive Root"),
+                                            )
+                                            .into_any_element()
+                                    } else {
+                                        div().into_any_element()
+                                    }
                                 ),
                         ),
                 ),
         )
-        // 3. Catalog Layout Density
+        // Section 3: Catalog Layout & Grid Density Slider
         .child(
             div()
                 .p(px(14.0))
@@ -299,14 +336,14 @@ pub fn render_settings_view(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
-                                .text_color(theme.text_muted)
-                                .child("MEDIA CATALOG DENSITY"),
+                                .text_color(theme.text_primary)
+                                .child("CATALOG GRID DENSITY"),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .text_color(theme.text_muted)
-                                .child(format!("Current: {} Columns", grid_cols)),
+                                .child(format!("Current: {} Columns per row", grid_cols)),
                         ),
                 )
                 .child(
@@ -314,21 +351,22 @@ pub fn render_settings_view(
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        .children([4, 5, 6, 7, 8, 9].iter().map(|&cols| {
-                            let is_current = grid_cols == cols;
-                            let state_col = app_state.clone();
+                        .children((4..=9).map(|cols| {
+                            let is_current = cols == grid_cols;
+                            let state_c = state_grid.clone();
+
                             div()
-                                .id(SharedString::from(format!("col-btn-{}", cols)))
+                                .id(SharedString::from(format!("grid-cols-pill-{}", cols)))
                                 .cursor_pointer()
-                                .px(px(12.0))
-                                .py(px(5.0))
+                                .px(px(10.0))
+                                .py(px(4.0))
                                 .rounded(px(4.0))
-                                .bg(if is_current { theme.bg_pill_active } else { theme.bg_pill })
+                                .bg(if is_current { theme.bg_pill_active } else { theme.bg_sidebar })
                                 .border_1()
-                                .border_color(if is_current { theme.accent } else { theme.border_card })
-                                .hover(move |s| s.border_color(theme.border_active))
+                                .border_color(if is_current { theme.accent } else { theme.border_subtle })
+                                .hover(move |s| s.border_color(theme.accent))
                                 .on_click(move |_, _, cx| {
-                                    state_col.update(cx, |s, cx| {
+                                    state_c.update(cx, |s, cx| {
                                         s.set_grid_columns(cols);
                                         cx.notify();
                                     });
@@ -337,13 +375,13 @@ pub fn render_settings_view(
                                     div()
                                         .text_xs()
                                         .font_weight(if is_current { FontWeight::BOLD } else { FontWeight::NORMAL })
-                                        .text_color(if is_current { theme.text_primary } else { theme.text_secondary })
-                                        .child(format!("{} Cols", cols)),
+                                        .text_color(if is_current { theme.accent } else { theme.text_secondary })
+                                        .child(format!("{} cols", cols)),
                                 )
                         })),
                 ),
         )
-        // 4. Drive Volume & Safe Eject
+        // Section 4: Removable Drive Management & Functional Ejection
         .child(
             div()
                 .p(px(14.0))
@@ -354,13 +392,6 @@ pub fn render_settings_view(
                 .flex()
                 .flex_col()
                 .gap(px(10.0))
-                .child(
-                    div()
-                        .text_xs()
-                        .font_weight(FontWeight::BOLD)
-                        .text_color(theme.text_muted)
-                        .child("DRIVE HARDWARE & VOLUME EJECTION"),
-                )
                 .child(
                     div()
                         .flex()
@@ -368,54 +399,99 @@ pub fn render_settings_view(
                         .justify_between()
                         .child(
                             div()
-                                .flex()
-                                .flex_col()
-                                .gap(px(2.0))
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .font_weight(FontWeight::MEDIUM)
-                                        .text_color(theme.text_primary)
-                                        .child(if let Some(ref d) = selected_drive {
-                                            format!("Mounted Volume: {} ({})", d.name, d.size_formatted)
-                                        } else {
-                                            "No Drive Selected".to_string()
-                                        }),
-                                )
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .text_color(theme.text_muted)
-                                        .child("Safely unmount filesystem before unplugging hardware to prevent data corruption."),
-                                ),
+                                .text_xs()
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.text_primary)
+                                .child("STORAGE VOLUMES & DEVICE OPERATIONS"),
                         )
                         .child(
                             div()
-                                .id(SharedString::from("settings-eject-btn"))
-                                .cursor_pointer()
-                                .px(px(10.0))
-                                .py(px(4.0))
-                                .rounded(px(4.0))
-                                .bg(theme.bg_pill)
-                                .border_1()
-                                .border_color(theme.border_card)
-                                .hover(move |s| s.bg(theme.accent_danger).text_color(rgb(0xffffff)))
-                                .on_click(move |_, _, cx| {
-                                    state_eject.update(cx, |s, cx| {
-                                        s.eject_selected_drive();
-                                        cx.notify();
-                                    });
-                                })
-                                .child(
-                                    div()
-                                        .text_xs()
-                                        .font_weight(FontWeight::MEDIUM)
-                                        .child(format!("{} Safe Eject", Icon::STOP)),
-                                ),
+                                .text_xs()
+                                .text_color(theme.text_muted)
+                                .child(format!("{} detected block devices", drives.len())),
                         ),
+                )
+                .child(
+                    if let Some(ref drive) = selected_drive {
+                        div()
+                            .p(px(10.0))
+                            .rounded(px(4.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
+                            .flex()
+                            .items_center()
+                            .justify_between()
+                            .child(
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(10.0))
+                                    .child(
+                                        div()
+                                            .text_sm()
+                                            .text_color(theme.accent)
+                                            .child(Icon::DISK),
+                                    )
+                                    .child(
+                                        div()
+                                            .flex()
+                                            .flex_col()
+                                            .gap(px(2.0))
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::BOLD)
+                                                    .text_color(theme.text_primary)
+                                                    .child(format!("{} ({})", drive.name, drive.size_formatted)),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .text_color(theme.text_muted)
+                                                    .child(format!("Mountpoint: {}", drive.mount_path.display())),
+                                            ),
+                                    ),
+                            )
+                            .child(
+                                div()
+                                    .id(SharedString::from("eject-drive-settings-btn"))
+                                    .cursor_pointer()
+                                    .px(px(8.0))
+                                    .py(px(4.0))
+                                    .rounded(px(4.0))
+                                    .bg(theme.bg_pill)
+                                    .border_1()
+                                    .border_color(theme.accent_danger)
+                                    .hover(move |s| s.bg(theme.accent_danger).text_color(rgb(0xffffff)))
+                                    .on_click(move |_, _, cx| {
+                                        state_eject.update(cx, |s, cx| {
+                                            s.eject_selected_drive();
+                                            cx.notify();
+                                        });
+                                    })
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(theme.accent_danger)
+                                            .child(format!("{} Safe Eject Volume", Icon::CLOSE)),
+                                    ),
+                            )
+                    } else {
+                        div()
+                            .p(px(10.0))
+                            .rounded(px(4.0))
+                            .bg(theme.bg_sidebar)
+                            .border_1()
+                            .border_color(theme.border_subtle)
+                            .text_xs()
+                            .text_color(theme.text_muted)
+                            .child(format!("{} No drive mounted. Connect an external drive or use the sidebar to mount a volume.", Icon::INFO))
+                    }
                 ),
         )
-        // 5. System Diagnostics & Technical Metrics
+        // Section 5: System Diagnostics & Framework Info
         .child(
             div()
                 .p(px(14.0))
@@ -425,13 +501,13 @@ pub fn render_settings_view(
                 .border_color(theme.border_card)
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
+                .gap(px(8.0))
                 .child(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::BOLD)
-                        .text_color(theme.text_muted)
-                        .child("SYSTEM & RUNTIME DIAGNOSTICS"),
+                        .text_color(theme.text_primary)
+                        .child("SYSTEM ARCHITECTURE & DIAGNOSTICS"),
                 )
                 .child(
                     div()
@@ -442,7 +518,7 @@ pub fn render_settings_view(
                         .child(render_diagnostic_row("Database Status", if db_connected { "Active & Connected" } else { "Closed" }, &theme))
                         .child(render_diagnostic_row("UI Rendering Framework", "GPUI (GPU-accelerated native)", &theme))
                         .child(render_diagnostic_row("Host Architecture", "Linux x86_64", &theme))
-                        .child(render_diagnostic_row("Local Media Streaming", "127.0.0.1 (Ready)", &theme))
+                        .child(render_diagnostic_row("Media I/O Engine", "Direct Native File Seeking (Zero Overhead)", &theme))
                         .child(render_diagnostic_row("Thumbnail Generator Cache", "14.2 MB (Ready)", &theme)),
                 ),
         )
@@ -469,35 +545,4 @@ fn render_diagnostic_row(label: &str, val: &str, theme: &crate::theme::AppTheme)
                 .text_color(theme.text_secondary)
                 .child(val.to_string()),
         )
-}
-
-/// Fallback helper executing zenity or kdialog if the native desktop portal does not respond.
-fn pick_folder_fallback() -> Option<PathBuf> {
-    // 1. Try zenity
-    if let Ok(output) = std::process::Command::new("zenity")
-        .args(["--file-selection", "--directory", "--title=Select Media Library Directory"])
-        .output()
-    {
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path_str.is_empty() {
-                return Some(PathBuf::from(path_str));
-            }
-        }
-    }
-
-    // 2. Try kdialog
-    if let Ok(output) = std::process::Command::new("kdialog")
-        .args(["--getexistingdirectory", "--title", "Select Media Library Directory"])
-        .output()
-    {
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path_str.is_empty() {
-                return Some(PathBuf::from(path_str));
-            }
-        }
-    }
-
-    None
 }

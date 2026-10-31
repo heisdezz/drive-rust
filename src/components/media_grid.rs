@@ -4,6 +4,7 @@ use crate::components::filter_bar::render_filter_bar;
 use crate::components::media_card::render_media_card;
 use crate::state::app_state::AppState;
 use crate::state::models::{MediaFilterType, MediaSortBy};
+use crate::theme::icons::Icon;
 
 /// Renders the complete media catalog grid view, including filter toolbar and pagination with dynamic theme support.
 pub fn render_media_grid(
@@ -15,17 +16,25 @@ pub fn render_media_grid(
     let filter = state.media_filter;
     let sort_by = state.media_sort_by;
     let sort_order = state.media_sort_order;
+    let search_query = state.media_search_query.clone();
     let page = state.media_page;
     let page_size = state.media_page_size;
     let selected_ids = state.selected_media_ids.clone();
     let theme = state.theme;
+    let grid_columns = state.grid_columns;
 
     let db_opt = state.active_db.clone();
+
+    let search_param = if search_query.trim().is_empty() {
+        None
+    } else {
+        Some(search_query.trim())
+    };
 
     // Query media items from SQLite
     let (items, total_count) = if let Some(ref db) = db_opt {
         let offset = ((page.saturating_sub(1)) * page_size) as i64;
-        db.get_media_items(None, page_size as i64, offset, filter, None, sort_by, sort_order)
+        db.get_media_items(None, page_size as i64, offset, filter, search_param, sort_by, sort_order)
             .unwrap_or_default()
     } else {
         (Vec::new(), 0)
@@ -43,6 +52,8 @@ pub fn render_media_grid(
     let state_filter = app_state.clone();
     let state_sort = app_state.clone();
     let state_order = app_state.clone();
+    let state_search = app_state.clone();
+    let state_clear_search = app_state.clone();
     let state_prev = app_state.clone();
     let state_next = app_state.clone();
 
@@ -60,18 +71,30 @@ pub fn render_media_grid(
         });
     });
 
+    // Dynamic card width based on configured grid columns (4 to 9 cols)
+    let card_w = match grid_columns {
+        4 => px(216.0),
+        5 => px(172.0),
+        6 => px(142.0),
+        7 => px(120.0),
+        8 => px(104.0),
+        9 => px(90.0),
+        _ => px(142.0),
+    };
+
     div()
         .flex()
         .flex_col()
         .gap(px(10.0))
         .w_full()
         .h_full()
-        // Top: Filter & Sort Bar
+        // Top: Filter & Sort Bar with Search Presets & Active Query Tag
         .child(render_filter_bar(
             filter,
             sort_by,
             sort_order,
             total_count,
+            Some(&search_query),
             &theme,
             on_filter,
             on_sort,
@@ -81,6 +104,18 @@ pub fn render_media_grid(
                     cx.notify();
                 });
             },
+            Some(Arc::new(move |q, cx| {
+                state_search.update(cx, |s, cx| {
+                    s.set_media_search_query(q);
+                    cx.notify();
+                });
+            })),
+            Some(Arc::new(move |cx| {
+                state_clear_search.update(cx, |s, cx| {
+                    s.clear_media_search_query();
+                    cx.notify();
+                });
+            })),
         ))
         // Center: Grid of cards or Empty State
         .child(
@@ -112,9 +147,11 @@ pub fn render_media_grid(
                                 div()
                                     .text_xs()
                                     .text_color(theme.text_muted)
-                                    .child("Select a mounted drive from the sidebar to inspect or catalog media."),
+                                    .child("Select a mounted drive or folder from the sidebar to inspect or catalog media."),
                             )
                     } else if items.is_empty() {
+                        let state_empty_clear = app_state.clone();
+                        let q = search_query.clone();
                         div()
                             .p(px(32.0))
                             .rounded(px(6.0))
@@ -128,19 +165,60 @@ pub fn render_media_grid(
                             .gap(px(8.0))
                             .child(
                                 div()
+                                    .text_color(if !q.is_empty() { theme.accent_warning } else { theme.text_muted })
+                                    .child(if !q.is_empty() { Icon::SEARCH } else { Icon::PLAY }),
+                            )
+                            .child(
+                                div()
                                     .text_sm()
                                     .font_weight(FontWeight::SEMIBOLD)
                                     .text_color(theme.text_primary)
-                                    .child("No Media Items Found"),
+                                    .child(if !q.is_empty() {
+                                        format!("No media items matching \"{}\"", q)
+                                    } else {
+                                        "No Media Items Found".to_string()
+                                    }),
                             )
                             .child(
                                 div()
                                     .text_xs()
                                     .text_color(theme.text_muted)
-                                    .child("No files match your current filters, or the drive hasn't been scanned yet. Go to Discover to start indexing."),
+                                    .child(if !q.is_empty() {
+                                        "Try a different search term or clear the filter."
+                                    } else {
+                                        "No files match your current filters, or the drive hasn't been scanned yet. Go to Discover to start indexing."
+                                    }),
+                            )
+                            .child(
+                                if !q.is_empty() {
+                                    div()
+                                        .id(SharedString::from("empty-clear-media-search-btn"))
+                                        .cursor_pointer()
+                                        .mt(px(6.0))
+                                        .px(px(10.0))
+                                        .py(px(4.0))
+                                        .rounded(px(4.0))
+                                        .bg(theme.bg_pill)
+                                        .border_1()
+                                        .border_color(theme.border_card)
+                                        .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_primary)
+                                        .on_click(move |_, _, cx| {
+                                            state_empty_clear.update(cx, |s, cx| {
+                                                s.clear_media_search_query();
+                                                cx.notify();
+                                            });
+                                        })
+                                        .child(format!("{} Clear Search Filter", Icon::CLOSE))
+                                        .into_any_element()
+                                } else {
+                                    div().into_any_element()
+                                }
                             )
                     } else {
-                        // Responsive card flow grid
+                        // Responsive card flow grid with dynamic column sizing
                         div()
                             .flex()
                             .flex_wrap()
@@ -154,7 +232,7 @@ pub fn render_media_grid(
                                 let db_card = db_opt.clone();
 
                                 div()
-                                    .w(px(146.0))
+                                    .w(card_w)
                                     .child(render_media_card(
                                         &item,
                                         is_selected,

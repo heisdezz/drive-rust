@@ -23,9 +23,9 @@ pub fn render_video_test_modal(
     let is_stream = video_url.starts_with("http://") || video_url.starts_with("https://");
 
     let protocol_label = if is_local {
-        "Local File System"
+        "Direct Native File (Zero Copy)"
     } else if is_stream {
-        "HTTP Stream (Range 206)"
+        "Remote HTTP Stream"
     } else if is_empty {
         "None"
     } else {
@@ -50,13 +50,13 @@ pub fn render_video_test_modal(
                 .bg(theme.bg_card)
                 .border_1()
                 .border_color(theme.border_active)
-                .overflow_hidden()
                 .flex()
                 .flex_col()
-                // Header (Zed 38px height)
+                .overflow_hidden()
+                // Modal Topbar
                 .child(
                     div()
-                        .h(px(38.0))
+                        .h(px(40.0))
                         .px(px(14.0))
                         .bg(theme.bg_header)
                         .border_b_1()
@@ -72,7 +72,6 @@ pub fn render_video_test_modal(
                                 .child(
                                     div()
                                         .text_xs()
-                                        .font_weight(FontWeight::BOLD)
                                         .text_color(theme.accent)
                                         .child(Icon::VIDEO),
                                 )
@@ -81,49 +80,77 @@ pub fn render_video_test_modal(
                                         .text_xs()
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(theme.text_primary)
-                                        .child("Video URL / Stream Tester"),
+                                        .child("Direct Media File / Stream Testing Canvas"),
                                 )
                                 .child(
                                     div()
                                         .px(px(6.0))
-                                        .py(px(1.0))
+                                        .py(px(1.5))
                                         .rounded(px(3.0))
                                         .bg(theme.bg_pill)
+                                        .border_1()
+                                        .border_color(theme.border_card)
                                         .text_xs()
-                                        .text_color(theme.text_muted)
-                                        .child("Test Suite"),
+                                        .text_color(theme.accent)
+                                        .child(protocol_label),
                                 ),
                         )
                         .child(
                             div()
-                                .id(SharedString::from("close-video-test-modal-btn"))
+                                .id(SharedString::from("close-video-test-btn"))
                                 .cursor_pointer()
-                                .w(px(22.0))
-                                .h(px(22.0))
-                                .rounded(px(4.0))
-                                .flex()
-                                .items_center()
-                                .justify_center()
+                                .px(px(8.0))
+                                .py(px(2.5))
+                                .rounded(px(3.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_card)
                                 .text_xs()
+                                .font_weight(FontWeight::MEDIUM)
                                 .text_color(theme.text_secondary)
-                                .hover(move |s| s.bg(theme.bg_pill_active).text_color(theme.text_primary))
+                                .hover(move |s| s.bg(theme.bg_card_hover).text_color(theme.text_primary))
                                 .on_click(move |_, _, cx| {
                                     state_close.update(cx, |s, cx| {
                                         s.close_video_test_modal();
                                         cx.notify();
                                     });
                                 })
-                                .child(Icon::CLOSE),
+                                .child(format!("{} Close", Icon::CLOSE)),
                         ),
                 )
-                // Body
+                // Modal Body
                 .child(
                     div()
                         .p(px(16.0))
                         .flex()
                         .flex_col()
                         .gap(px(12.0))
-                        // URL Input Box & Presets
+                        // Description banner
+                        .child(
+                            div()
+                                .p(px(10.0))
+                                .rounded(px(5.0))
+                                .bg(theme.bg_sidebar)
+                                .border_1()
+                                .border_color(theme.border_subtle)
+                                .flex()
+                                .flex_col()
+                                .gap(px(4.0))
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_primary)
+                                        .child("Direct Media Input Testing"),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(theme.text_muted)
+                                        .child("Test media playback by specifying a direct file path on disk or a remote HTTP stream URL. Unlike browser webviews, native Rust reads files directly from the filesystem with zero-copy seeking."),
+                                ),
+                        )
+                        // Input Field Card
                         .child(
                             div()
                                 .flex()
@@ -132,27 +159,25 @@ pub fn render_video_test_modal(
                                 .child(
                                     div()
                                         .text_xs()
-                                        .font_weight(FontWeight::MEDIUM)
-                                        .text_color(theme.text_secondary)
-                                        .child("Target Video URL / File Path:"),
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(theme.text_primary)
+                                        .child("MEDIA FILE PATH / STREAM URL:"),
                                 )
                                 .child(
                                     div()
-                                        .p(px(8.0))
-                                        .rounded(px(5.0))
+                                        .px(px(10.0))
+                                        .py(px(8.0))
+                                        .rounded(px(4.0))
                                         .bg(theme.bg_sidebar)
                                         .border_1()
                                         .border_color(theme.border_card)
-                                        .flex()
-                                        .items_center()
-                                        .justify_between()
                                         .child(
                                             div()
                                                 .text_xs()
-                                                .font_weight(FontWeight::NORMAL)
+                                                .font_family("monospace")
                                                 .text_color(if is_empty { theme.text_muted } else { theme.text_primary })
                                                 .child(if is_empty {
-                                                    "Enter or select a video URL (e.g. http://127.0.0.1:8080/stream/video.mp4)...".to_string()
+                                                    "Enter direct file path (e.g. /media/video.mp4) or URL...".to_string()
                                                 } else {
                                                     video_url.clone()
                                                 }),
@@ -167,8 +192,9 @@ pub fn render_video_test_modal(
                                         .child(
                                             div()
                                                 .text_xs()
+                                                .font_weight(FontWeight::MEDIUM)
                                                 .text_color(theme.text_muted)
-                                                .child("Presets:"),
+                                                .child("PRESETS:"),
                                         )
                                         .child(
                                             div()
@@ -183,7 +209,7 @@ pub fn render_video_test_modal(
                                                 .hover(move |s| s.bg(theme.bg_pill_active).text_color(theme.text_primary))
                                                 .on_click(move |_, _, cx| {
                                                     state_preset1.update(cx, |s, cx| {
-                                                        s.set_test_video_url("/run/media/destiny/Ventoy/sample_media/4k_demo.mp4".to_string());
+                                                        s.set_test_video_url("/run/media/destiny/Ventoy/sample.mp4".to_string());
                                                         cx.notify();
                                                     });
                                                 })
@@ -191,7 +217,7 @@ pub fn render_video_test_modal(
                                         )
                                         .child(
                                             div()
-                                                .id(SharedString::from("preset-http-btn"))
+                                                .id(SharedString::from("preset-drive-btn"))
                                                 .cursor_pointer()
                                                 .px(px(6.0))
                                                 .py(px(2.0))
@@ -202,15 +228,15 @@ pub fn render_video_test_modal(
                                                 .hover(move |s| s.bg(theme.bg_pill_active).text_color(theme.text_primary))
                                                 .on_click(move |_, _, cx| {
                                                     state_preset2.update(cx, |s, cx| {
-                                                        s.set_test_video_url("http://127.0.0.1:8080/stream/4k_landscape.mp4".to_string());
+                                                        s.set_test_video_url("/run/media/destiny/Ventoy/media/sample_4k.mp4".to_string());
                                                         cx.notify();
                                                     });
                                                 })
-                                                .child("Localhost 127.0.0.1 Stream"),
+                                                .child("Removable Drive MP4"),
                                         )
                                         .child(
                                             div()
-                                                .id(SharedString::from("preset-hls-btn"))
+                                                .id(SharedString::from("preset-remote-btn"))
                                                 .cursor_pointer()
                                                 .px(px(6.0))
                                                 .py(px(2.0))
@@ -247,27 +273,21 @@ pub fn render_video_test_modal(
                                         .gap(px(14.0))
                                         .child(
                                             div()
-                                                .flex()
-                                                .items_center()
-                                                .gap(px(4.0))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("Protocol:"))
-                                                .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(theme.text_primary).child(protocol_label)),
+                                                .text_xs()
+                                                .text_color(theme.text_muted)
+                                                .child(format!("Container: {}", if is_empty { "-" } else { "MP4 / ISO BMFF" })),
                                         )
                                         .child(
                                             div()
-                                                .flex()
-                                                .items_center()
-                                                .gap(px(4.0))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("Codec:"))
-                                                .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(theme.text_primary).child("H.264 / AAC")),
+                                                .text_xs()
+                                                .text_color(theme.text_muted)
+                                                .child(format!("Codec: {}", if is_empty { "-" } else { "H.264 / AVC1 + AAC" })),
                                         )
                                         .child(
                                             div()
-                                                .flex()
-                                                .items_center()
-                                                .gap(px(4.0))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("Resolution:"))
-                                                .child(div().text_xs().font_weight(FontWeight::BOLD).text_color(theme.text_primary).child("3840 × 2160 (4K)")),
+                                                .text_xs()
+                                                .text_color(theme.text_muted)
+                                                .child(format!("I/O Engine: {}", if is_local { "Direct OS File Seek" } else { "HTTP Client" })),
                                         ),
                                 )
                                 .child(
@@ -287,95 +307,51 @@ pub fn render_video_test_modal(
                                                 .text_xs()
                                                 .font_weight(FontWeight::MEDIUM)
                                                 .text_color(if is_empty { theme.accent_warning } else { theme.accent_success })
-                                                .child(if is_empty { "No Stream" } else { "Stream Connected" }),
+                                                .child(if is_empty { "Awaiting Media Input" } else { "Media Verified" }),
                                         ),
                                 ),
                         )
-                        // Mock Video Canvas with monochrome controls
+                        // Canvas / Player Rendering Stage
                         .child(
                             div()
-                                .w_full()
-                                .h(px(240.0))
+                                .h(px(280.0))
                                 .rounded(px(6.0))
-                                .bg(rgba(0x050a12ee))
+                                .bg(rgb(0x0a0a0c))
                                 .border_1()
                                 .border_color(theme.border_card)
                                 .flex()
                                 .flex_col()
-                                .justify_between()
-                                .p(px(12.0))
-                                // Center Canvas graphics
+                                .items_center()
+                                .justify_center()
+                                .gap(px(10.0))
                                 .child(
                                     div()
-                                        .flex_grow(1.0)
-                                        .flex()
-                                        .flex_col()
-                                        .items_center()
-                                        .justify_center()
-                                        .gap(px(8.0))
-                                        .child(
-                                            div()
-                                                .w(px(48.0))
-                                                .h(px(48.0))
-                                                .rounded(px(24.0))
-                                                .bg(theme.accent)
-                                                .flex()
-                                                .items_center()
-                                                .justify_center()
-                                                .text_lg()
-                                                .text_color(rgb(0xffffff))
-                                                .child(Icon::PLAY),
-                                        )
-                                        .child(
-                                            div()
-                                                .text_xs()
-                                                .font_weight(FontWeight::MEDIUM)
-                                                .text_color(theme.text_secondary)
-                                                .child(if is_empty { "Awaiting videoUrl input..." } else { "Playback Ready (Click to Play)" }),
-                                        ),
+                                        .text_3xl()
+                                        .text_color(theme.accent)
+                                        .child(Icon::PLAY),
                                 )
-                                // Video timeline & controls
                                 .child(
                                     div()
-                                        .h(px(32.0))
-                                        .px(px(8.0))
-                                        .rounded(px(4.0))
-                                        .bg(rgba(0x00000088))
-                                        .border_1()
-                                        .border_color(rgba(0xffffff15))
-                                        .flex()
-                                        .items_center()
-                                        .justify_between()
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .items_center()
-                                                .gap(px(8.0))
-                                                .child(div().text_xs().text_color(rgb(0xffffff)).child(Icon::PLAY))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("00:00 / 03:15")),
-                                        )
-                                        .child(
-                                            div()
-                                                .w(px(320.0))
-                                                .h(px(4.0))
-                                                .rounded(px(2.0))
-                                                .bg(theme.bg_pill)
-                                                .child(
-                                                    div()
-                                                        .w(px(100.0))
-                                                        .h(px(4.0))
-                                                        .rounded(px(2.0))
-                                                        .bg(theme.accent),
-                                                ),
-                                        )
-                                        .child(
-                                            div()
-                                                .flex()
-                                                .items_center()
-                                                .gap(px(8.0))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("1080p"))
-                                                .child(div().text_xs().text_color(theme.text_muted).child("100%")),
-                                        ),
+                                        .text_sm()
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_color(theme.text_primary)
+                                        .child(if is_empty {
+                                            "No Video Loaded".to_string()
+                                        } else {
+                                            format!("Playback Canvas Ready")
+                                        }),
+                                )
+                                .child(
+                                    div()
+                                        .max_w(px(500.0))
+                                        .text_xs()
+                                        .text_color(theme.text_muted)
+                                        .text_center()
+                                        .child(if is_empty {
+                                            "Select a test preset above to simulate video rendering."
+                                        } else {
+                                            "Direct native decoding pipeline. Frame seeking and time indexing mapped to file seek offsets."
+                                        }),
                                 ),
                         ),
                 ),

@@ -4,6 +4,7 @@ use crate::theme::AppTheme;
 use crate::theme::icons::Icon;
 
 /// Renders a single drive card in the sidebar based on the reference design.
+/// Internal system drives are protected and disabled from selection by default.
 pub fn render_drive_card(
     drive: &DriveInfo,
     is_selected: bool,
@@ -17,29 +18,38 @@ pub fn render_drive_card(
 
     let border_color = if is_selected {
         theme.accent
+    } else if is_system {
+        theme.border_subtle
     } else {
         theme.border_card
     };
 
     let hover_bg = if is_selected {
         theme.bg_card
+    } else if is_system {
+        theme.bg_card
     } else {
         theme.bg_card_hover
     };
 
-    div()
+    let mut card = div()
         .id(SharedString::from(format!("drive-card-{}", drive.id)))
-        .cursor_pointer()
         .p(px(8.0))
         .rounded(px(6.0))
         .border_1()
         .border_color(border_color)
         .bg(theme.bg_card)
-        .hover(move |s| s.bg(hover_bg))
-        .on_click(on_click)
         .flex()
         .flex_col()
-        .gap(px(6.0))
+        .gap(px(6.0));
+
+    if is_system {
+        card = card.cursor_not_allowed();
+    } else {
+        card = card.cursor_pointer().hover(move |s| s.bg(hover_bg)).on_click(on_click);
+    }
+
+    card
         // Top row: disk icon + volume name & size + type badge
         .child(
             div()
@@ -65,7 +75,13 @@ pub fn render_drive_card(
                                 .items_center()
                                 .justify_center()
                                 .text_xs()
-                                .text_color(if is_selected { theme.accent } else { theme.text_muted })
+                                .text_color(if is_selected {
+                                    theme.accent
+                                } else if is_system {
+                                    theme.text_muted
+                                } else {
+                                    theme.text_secondary
+                                })
                                 .child(Icon::DISK),
                         )
                         .child(
@@ -78,7 +94,7 @@ pub fn render_drive_card(
                                     div()
                                         .text_xs()
                                         .font_weight(FontWeight::BOLD)
-                                        .text_color(theme.text_primary)
+                                        .text_color(if is_system { theme.text_secondary } else { theme.text_primary })
                                         .overflow_hidden()
                                         .child(drive_name),
                                 )
@@ -100,7 +116,7 @@ pub fn render_drive_card(
                             .text_xs()
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(theme.text_muted)
-                            .child("SYSTEM")
+                            .child("SYSTEM (Disabled)")
                     } else if drive.is_mounted {
                         div()
                             .px(px(6.0))
@@ -136,7 +152,7 @@ pub fn render_drive_card(
                     div()
                         .h_full()
                         .w(relative((used_pct as f32).clamp(0.0, 100.0) / 100.0))
-                        .bg(theme.accent)
+                        .bg(if is_system { theme.text_muted } else { theme.accent })
                         .rounded(px(1.25)),
                 ),
         )

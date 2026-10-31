@@ -2,6 +2,8 @@ use gpui_kit::*;
 use crate::drives::detector::list_drives;
 use crate::state::app_state::{AppRoute, AppState};
 use crate::components::drive_card::render_drive_card;
+use crate::components::folder_picker::prompt_mount_custom_folder;
+use crate::state::models::DriveType;
 use crate::theme::icons::Icon;
 
 const NAV_ITEMS: &[(AppRoute, &str, &str)] = &[
@@ -255,6 +257,7 @@ pub fn render_sidebar(
                                     let is_selected = selected_id.as_ref() == Some(&drive.id);
                                     let state_clone = app_state.clone();
                                     let d = drive.clone();
+                                    let is_sys = drive.drive_type == DriveType::Internal || drive.name == "System Root";
 
                                     div()
                                         .id(SharedString::from(format!("drive-item-{}", drive.id)))
@@ -263,11 +266,13 @@ pub fn render_sidebar(
                                             is_selected,
                                             &theme,
                                             move |_, _, cx| {
-                                                let drive_to_select = d.clone();
-                                                state_clone.update(cx, |s, cx| {
-                                                    s.select_drive(drive_to_select);
-                                                    cx.notify();
-                                                });
+                                                if !is_sys {
+                                                    let drive_to_select = d.clone();
+                                                    state_clone.update(cx, |s, cx| {
+                                                        s.select_drive(drive_to_select);
+                                                        cx.notify();
+                                                    });
+                                                }
                                             },
                                         ))
                                         .into_any_element()
@@ -275,35 +280,37 @@ pub fn render_sidebar(
                             }
                         ),
                 )
-                // Mount Drive Button
+                // Mount Folder as Drive Button
                 .child(
                     div()
-                        .id(SharedString::from("mount-drive-btn"))
+                        .id(SharedString::from("mount-folder-btn"))
                         .cursor_pointer()
                         .w_full()
                         .py(px(6.0))
-                        .rounded(px(16.0))
+                        .rounded(px(6.0))
                         .bg(theme.bg_card)
                         .border_1()
                         .border_color(theme.accent)
-                        .hover(move |s| s.bg(theme.bg_pill_active))
+                        .hover(move |s| s.bg(theme.bg_card_hover))
                         .on_click(move |_, _, cx| {
-                            state_mount.update(cx, |s, cx| {
-                                let detected = list_drives();
-                                s.set_drives(detected);
-                                cx.notify();
-                            });
+                            prompt_mount_custom_folder(&state_mount, cx);
                         })
                         .flex()
                         .items_center()
                         .justify_center()
-                        .gap(px(4.0))
+                        .gap(px(6.0))
+                        .child(
+                            div()
+                                .text_xs()
+                                .text_color(theme.accent)
+                                .child(Icon::FOLDER),
+                        )
                         .child(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(theme.accent)
-                                .child(format!("{} Mount Drive", Icon::PLUS)),
+                                .child("Mount Folder as Drive"),
                         ),
                 ),
         )
