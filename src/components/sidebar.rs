@@ -1,14 +1,17 @@
 use gpui_kit::*;
+use crate::drives::detector::list_drives;
 use crate::state::app_state::{AppRoute, AppState};
 use crate::components::drive_card::render_drive_card;
+use crate::theme::icons::Icon;
 
 const NAV_ITEMS: &[(AppRoute, &str, &str)] = &[
-    (AppRoute::Dashboard, "Dashboard", "⊞"),
-    (AppRoute::Discover, "Discover", "⌕"),
-    (AppRoute::Medias, "Media Library", "▣"),
-    (AppRoute::Albums, "Albums", "◫"),
-    (AppRoute::Settings, "Settings", "⚙"),
-    (AppRoute::About, "System Info", "ℹ"),
+    (AppRoute::Dashboard, "Dashboard", Icon::HOME),
+    (AppRoute::Discover, "Discover", Icon::DISCOVER),
+    (AppRoute::Medias, "Media Library", Icon::PLAY),
+    (AppRoute::Albums, "Albums", Icon::ALBUMS),
+    (AppRoute::StateCounter, "State Counter", Icon::STATS),
+    (AppRoute::About, "System Info", Icon::MONITOR),
+    (AppRoute::Settings, "Settings", Icon::SETTINGS),
 ];
 
 pub fn render_sidebar(
@@ -22,8 +25,12 @@ pub fn render_sidebar(
     let selected_id = state.selected_drive.as_ref().map(|d| d.id.clone());
     let theme = state.theme;
 
+    let state_refresh = app_state.clone();
+    let state_mount = app_state.clone();
+
     div()
-        .w(px(220.0))
+        .id(SharedString::from("app-sidebar-container"))
+        .w(px(236.0))
         .h_full()
         .bg(theme.bg_sidebar)
         .border_r_1()
@@ -31,26 +38,27 @@ pub fn render_sidebar(
         .flex()
         .flex_col()
         .justify_between()
-        .p(px(8.0))
-        // Top Section: App Title & Nav Links
+        .p(px(10.0))
+        .overflow_y_scroll()
+        // Top Section: Brand Header & Application Nav
         .child(
             div()
                 .flex()
                 .flex_col()
                 .gap(px(14.0))
-                // App Logo / Title
+                // Brand Logo Header: D-Stream
                 .child(
                     div()
-                        .px(px(6.0))
+                        .px(px(4.0))
                         .py(px(4.0))
                         .flex()
                         .items_center()
-                        .gap(px(8.0))
+                        .gap(px(10.0))
                         .child(
                             div()
-                                .w(px(20.0))
-                                .h(px(20.0))
-                                .rounded(px(4.0))
+                                .w(px(28.0))
+                                .h(px(28.0))
+                                .rounded(px(6.0))
                                 .bg(theme.accent)
                                 .flex()
                                 .items_center()
@@ -58,76 +66,120 @@ pub fn render_sidebar(
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(0xffffff))
-                                .child("RD"),
+                                .child(Icon::PLAY),
                         )
                         .child(
                             div()
-                                .text_xs()
-                                .font_weight(FontWeight::BOLD)
-                                .text_color(theme.text_primary)
-                                .child("Rust Drive"),
+                                .flex()
+                                .items_center()
+                                .child(
+                                    div()
+                                        .text_base()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(theme.text_primary)
+                                        .child("D-"),
+                                )
+                                .child(
+                                    div()
+                                        .text_base()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(theme.accent)
+                                        .child("Stream"),
+                                ),
                         ),
                 )
-                // Navigation Link Group
+                // APPLICATION Group
                 .child(
                     div()
                         .flex()
                         .flex_col()
-                        .gap(px(2.0))
-                        .children(NAV_ITEMS.iter().map(|(route, label, icon)| {
-                            let is_active = active_route == *route;
-                            let target_route = *route;
-                            let state_clone = app_state.clone();
-
+                        .gap(px(4.0))
+                        .child(
                             div()
-                                .id(SharedString::from(format!("nav-item-{}", label)))
-                                .cursor_pointer()
-                                .px(px(8.0))
-                                .py(px(4.5))
-                                .rounded(px(4.0))
-                                .bg(if is_active { theme.bg_pill_active } else { rgba(0x00000000) })
-                                .text_color(if is_active { theme.text_primary } else { theme.text_secondary })
-                                .hover(move |s| {
-                                    if !is_active {
-                                        s.bg(theme.bg_card_hover).text_color(theme.text_primary)
-                                    } else {
-                                        s
-                                    }
-                                })
-                                .on_click(move |_, _, cx| {
-                                    state_clone.update(cx, |s, cx| {
-                                        s.set_route(target_route);
-                                        cx.notify();
-                                    });
-                                })
-                                .child(
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .text_xs()
+                                .font_weight(FontWeight::BOLD)
+                                .text_color(theme.text_muted)
+                                .child("APPLICATION"),
+                        )
+                        .child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(px(2.0))
+                                .children(NAV_ITEMS.iter().map(|(route, label, icon)| {
+                                    let is_active = active_route == *route;
+                                    let target_route = *route;
+                                    let state_clone = app_state.clone();
+
                                     div()
-                                        .flex()
-                                        .items_center()
-                                        .gap(px(8.0))
+                                        .id(SharedString::from(format!("nav-item-{}", label)))
+                                        .cursor_pointer()
+                                        .relative()
+                                        .rounded(px(6.0))
+                                        .bg(if is_active { theme.bg_card } else { rgba(0x00000000) })
+                                        .hover(move |s| {
+                                            if !is_active {
+                                                s.bg(theme.bg_card_hover)
+                                            } else {
+                                                s
+                                            }
+                                        })
+                                        .on_click(move |_, _, cx| {
+                                            state_clone.update(cx, |s, cx| {
+                                                s.set_route(target_route);
+                                                cx.notify();
+                                            });
+                                        })
+                                        // Left accent vertical indicator bar when active
                                         .child(
-                                            div()
-                                                .text_xs()
-                                                .font_weight(FontWeight::NORMAL)
-                                                .text_color(if is_active { theme.accent } else { theme.text_muted })
-                                                .child(*icon),
+                                            if is_active {
+                                                div()
+                                                    .absolute()
+                                                    .left(px(0.0))
+                                                    .top(px(4.0))
+                                                    .bottom(px(4.0))
+                                                    .w(px(3.0))
+                                                    .rounded_r(px(1.5))
+                                                    .bg(theme.accent)
+                                                    .into_any_element()
+                                            } else {
+                                                div().into_any_element()
+                                            }
                                         )
+                                        // Nav item content
                                         .child(
                                             div()
-                                                .text_xs()
-                                                .font_weight(if is_active { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
-                                                .child(*label),
-                                        ),
-                                )
-                        })),
+                                                .flex()
+                                                .items_center()
+                                                .gap(px(10.0))
+                                                .px(px(10.0))
+                                                .py(px(6.0))
+                                                .child(
+                                                    div()
+                                                        .text_sm()
+                                                        .text_color(if is_active { theme.accent } else { theme.text_muted })
+                                                        .child(*icon),
+                                                )
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .font_weight(if is_active { FontWeight::SEMIBOLD } else { FontWeight::NORMAL })
+                                                        .text_color(if is_active { theme.text_primary } else { theme.text_secondary })
+                                                        .child(*label),
+                                                ),
+                                        )
+                                })),
+                        ),
                 ),
         )
-        // Bottom Section: Detected Removable Drives
+        // Bottom Section: Connected Drives & Mount Button
         .child(
             div()
                 .flex()
                 .flex_col()
-                .gap(px(6.0))
+                .gap(px(8.0))
                 .child(
                     div()
                         .px(px(6.0))
@@ -139,26 +191,53 @@ pub fn render_sidebar(
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_muted)
-                                .child("VOLUMES"),
+                                .child("CONNECTED DRIVES"),
                         )
                         .child(
                             div()
-                                .text_xs()
-                                .text_color(theme.text_muted)
-                                .child(format!("{}", drives.len())),
+                                .flex()
+                                .items_center()
+                                .gap(px(6.0))
+                                .child(
+                                    div()
+                                        .id(SharedString::from("refresh-drives-btn"))
+                                        .cursor_pointer()
+                                        .text_xs()
+                                        .text_color(theme.text_muted)
+                                        .hover(move |s| s.text_color(theme.accent))
+                                        .on_click(move |_, _, cx| {
+                                            state_refresh.update(cx, |s, cx| {
+                                                let detected = list_drives();
+                                                s.set_drives(detected);
+                                                cx.notify();
+                                            });
+                                        })
+                                        .child(Icon::REFRESH),
+                                )
+                                .child(
+                                    div()
+                                        .px(px(6.0))
+                                        .py(px(1.0))
+                                        .rounded(px(8.0))
+                                        .bg(theme.accent)
+                                        .text_xs()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(rgb(0xffffff))
+                                        .child(format!("{}", drives.len())),
+                                ),
                         ),
                 )
+                // Drive Cards list
                 .child(
                     div()
                         .flex()
                         .flex_col()
-                        .gap(px(4.0))
+                        .gap(px(6.0))
                         .children(
                             if drives.is_empty() {
                                 vec![
                                     div()
-                                        .px(px(6.0))
-                                        .py(px(8.0))
+                                        .p(px(8.0))
                                         .rounded(px(4.0))
                                         .bg(theme.bg_card)
                                         .border_1()
@@ -167,7 +246,7 @@ pub fn render_sidebar(
                                             div()
                                                 .text_xs()
                                                 .text_color(theme.text_muted)
-                                                .child("No removable drives"),
+                                                .child("No drives detected"),
                                         )
                                         .into_any_element(),
                                 ]
@@ -194,6 +273,37 @@ pub fn render_sidebar(
                                         .into_any_element()
                                 }).collect::<Vec<_>>()
                             }
+                        ),
+                )
+                // Mount Drive Button
+                .child(
+                    div()
+                        .id(SharedString::from("mount-drive-btn"))
+                        .cursor_pointer()
+                        .w_full()
+                        .py(px(6.0))
+                        .rounded(px(16.0))
+                        .bg(theme.bg_card)
+                        .border_1()
+                        .border_color(theme.accent)
+                        .hover(move |s| s.bg(theme.bg_pill_active))
+                        .on_click(move |_, _, cx| {
+                            state_mount.update(cx, |s, cx| {
+                                let detected = list_drives();
+                                s.set_drives(detected);
+                                cx.notify();
+                            });
+                        })
+                        .flex()
+                        .items_center()
+                        .justify_center()
+                        .gap(px(4.0))
+                        .child(
+                            div()
+                                .text_xs()
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.accent)
+                                .child(format!("{} Mount Drive", Icon::PLUS)),
                         ),
                 ),
         )

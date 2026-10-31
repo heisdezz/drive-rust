@@ -1,8 +1,9 @@
 use gpui_kit::*;
 use crate::state::models::{DriveInfo, DriveType};
 use crate::theme::AppTheme;
+use crate::theme::icons::Icon;
 
-/// Renders a single drive card in the sidebar with dynamic theme support.
+/// Renders a single drive card in the sidebar based on the reference design.
 pub fn render_drive_card(
     drive: &DriveInfo,
     is_selected: bool,
@@ -12,36 +13,16 @@ pub fn render_drive_card(
     let drive_name = drive.name.clone();
     let size_label = drive.size_formatted.clone();
     let used_pct = drive.used_percentage;
-    let is_external = drive.drive_type == DriveType::External;
+    let is_system = drive.drive_type == DriveType::Internal || drive.name == "System Root";
 
-    let type_label = match drive.drive_type {
-        DriveType::External => "USB",
-        DriveType::Internal => "SYS",
-        DriveType::Network => "NET",
-    };
-
-    let (bg_color, border_color) = if is_selected {
-        (theme.bg_pill_active, theme.border_active)
-    } else {
-        (rgba(0x00000000), rgba(0x00000000))
-    };
-
-    let icon_color = if is_external {
-        theme.accent_success
-    } else {
+    let border_color = if is_selected {
         theme.accent
-    };
-
-    let bar_fill_color = if used_pct > 90 {
-        theme.accent_danger
-    } else if is_external {
-        theme.accent_success
     } else {
-        theme.accent
+        theme.border_card
     };
 
     let hover_bg = if is_selected {
-        theme.bg_pill_active
+        theme.bg_card
     } else {
         theme.bg_card_hover
     };
@@ -49,15 +30,17 @@ pub fn render_drive_card(
     div()
         .id(SharedString::from(format!("drive-card-{}", drive.id)))
         .cursor_pointer()
-        .px(px(7.0))
-        .py(px(5.0))
-        .rounded(px(4.0))
+        .p(px(8.0))
+        .rounded(px(6.0))
         .border_1()
         .border_color(border_color)
-        .bg(bg_color)
+        .bg(theme.bg_card)
         .hover(move |s| s.bg(hover_bg))
         .on_click(on_click)
-        // Top row: status dot + volume name + type pill
+        .flex()
+        .flex_col()
+        .gap(px(6.0))
+        // Top row: disk icon + volume name & size + type badge
         .child(
             div()
                 .flex()
@@ -68,64 +51,112 @@ pub fn render_drive_card(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(6.0))
+                        .gap(px(8.0))
                         .overflow_hidden()
                         .child(
                             div()
-                                .w(px(6.0))
-                                .h(px(6.0))
-                                .rounded(px(3.0))
-                                .bg(icon_color)
-                                .flex_shrink_0(),
+                                .w(px(26.0))
+                                .h(px(26.0))
+                                .rounded(px(4.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_card)
+                                .flex()
+                                .items_center()
+                                .justify_center()
+                                .text_xs()
+                                .text_color(if is_selected { theme.accent } else { theme.text_muted })
+                                .child(Icon::DISK),
                         )
                         .child(
                             div()
-                                .text_xs()
-                                .font_weight(if is_selected { FontWeight::MEDIUM } else { FontWeight::NORMAL })
-                                .text_color(if is_selected { theme.text_primary } else { theme.text_secondary })
+                                .flex()
+                                .flex_col()
+                                .gap(px(1.0))
                                 .overflow_hidden()
-                                .child(drive_name),
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::BOLD)
+                                        .text_color(theme.text_primary)
+                                        .overflow_hidden()
+                                        .child(drive_name),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(theme.text_muted)
+                                        .child(size_label.clone()),
+                                ),
                         ),
                 )
                 .child(
-                    div()
-                        .px(px(4.0))
-                        .py(px(0.5))
-                        .rounded(px(3.0))
-                        .bg(theme.bg_pill)
-                        .text_color(theme.text_muted)
-                        .font_weight(FontWeight::MEDIUM)
-                        .child(type_label),
+                    if is_system {
+                        div()
+                            .px(px(5.0))
+                            .py(px(1.5))
+                            .rounded(px(3.0))
+                            .bg(theme.bg_pill)
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.text_muted)
+                            .child("SYSTEM")
+                    } else if drive.is_mounted {
+                        div()
+                            .px(px(6.0))
+                            .py(px(1.5))
+                            .rounded(px(3.0))
+                            .bg(theme.bg_pill_active)
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.accent)
+                            .child(format!("{} Mounted", Icon::DOT))
+                    } else {
+                        div()
+                            .px(px(5.0))
+                            .py(px(1.5))
+                            .rounded(px(3.0))
+                            .bg(theme.bg_pill)
+                            .text_xs()
+                            .font_weight(FontWeight::MEDIUM)
+                            .text_color(theme.text_muted)
+                            .child("Unmounted")
+                    },
                 ),
         )
-        // Bottom row: slim 2px progress bar + usage metrics
+        // Middle row: slim progress bar
         .child(
             div()
-                .mt(px(4.0))
+                .w_full()
+                .h(px(2.5))
+                .rounded(px(1.25))
+                .bg(theme.bg_pill)
+                .overflow_hidden()
                 .child(
                     div()
-                        .w_full()
-                        .h(px(2.0))
-                        .rounded(px(1.0))
-                        .bg(theme.border_subtle)
-                        .overflow_hidden()
-                        .child(
-                            div()
-                                .h_full()
-                                .w(relative(used_pct as f32 / 100.0))
-                                .bg(bar_fill_color)
-                                .rounded(px(1.0)),
-                        ),
+                        .h_full()
+                        .w(relative((used_pct as f32).clamp(0.0, 100.0) / 100.0))
+                        .bg(theme.accent)
+                        .rounded(px(1.25)),
+                ),
+        )
+        // Bottom row: usage percent on left, total size on right
+        .child(
+            div()
+                .flex()
+                .items_center()
+                .justify_between()
+                .child(
+                    div()
+                        .text_xs()
+                        .text_color(theme.text_muted)
+                        .child(format!("{}% used", used_pct)),
                 )
                 .child(
                     div()
-                        .mt(px(2.5))
-                        .flex()
-                        .items_center()
-                        .justify_between()
+                        .text_xs()
                         .text_color(theme.text_muted)
-                        .child(div().child(size_label))
-                        .child(div().child(format!("{}%", used_pct))),
+                        .child(size_label),
                 ),
         )
 }

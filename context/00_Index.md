@@ -20,6 +20,7 @@ Welcome to the **Rust-Drive** documentation and context base. This vault contain
 - **[[06_UI_Components]]** — GPUI and `gpui-kit` component specifications (Sidebar, Drive Cards, Media Cards, Modals, Players).
 - **[[07_State_Management]]** — GPUI Model-View architecture, reactive app state, and asynchronous background worker channels.
 - **[[08_Implementation_Steps]]** — Detailed, phase-by-phase implementation plan designed for incremental component-by-component development.
+- **[[09_Extended_Features_and_Roadmap]]** — Specifications for extended capabilities: Local Media Server, Mobile Sync, Tags, EXIF, Backups, and Audit.
 
 ---
 
@@ -48,12 +49,12 @@ Welcome to the **Rust-Drive** documentation and context base. This vault contain
 
 ## 🛠 Tech Stack Overview
 
-| Layer | Original Stack | Rust Port Stack |
-| :--- | :--- | :--- |
-| **GUI Framework** | Electrobun (WebKit) + SolidJS + DaisyUI | **GPUI** + **gpui-kit** (Zed GPU-accelerated framework) |
-| **Component Primitives**| Kobalte + Tailwind CSS | **gpui-kit** (Buttons, Dialogs, Inputs, Themes, Icons) |
-| **Runtime & Language** | Bun (TypeScript) + V8/JavaScriptCore | **Rust 1.99+ (Native Binary)** |
-| **Database** | `bun:sqlite` | **`rusqlite`** (Bundled SQLite with FTS5) |
-| **Drive Detection** | `systeminformation` (Node/Bun) | **`sysinfo`** crate |
-| **Thumbnails** | FFmpeg CLI + Bun child process | `image` crate (photos) + `ffmpeg` CLI (video frames) |
-| **Async Tasks** | JavaScript Promises + Event Loop | GPUI Background Executor (`cx.background_executor()`) |
+| Layer                    | Original Stack                          | Rust Port Stack                                         |
+| :----------------------- | :-------------------------------------- | :------------------------------------------------------ |
+| **GUI Framework**        | Electrobun (WebKit) + SolidJS + DaisyUI | **GPUI** + **gpui-kit** (Zed GPU-accelerated framework) |
+| **Component Primitives** | Kobalte + Tailwind CSS                  | **gpui-kit** (Buttons, Dialogs, Inputs, Themes, Icons)  |
+| **Runtime & Language**   | Bun (TypeScript) + V8/JavaScriptCore    | **Rust 1.99+ (Native Binary)**                          |
+| **Database**             | `bun:sqlite`                            | **`rusqlite`** (Bundled SQLite with FTS5)               |
+| **Drive Detection**      | `systeminformation` (Node/Bun)          | **`sysinfo`** crate                                     |
+| **Thumbnails**           | FFmpeg CLI + Bun child process          | `image` crate (photos) + `ffmpeg` CLI (video frames)    |
+| **Async Tasks**          | JavaScript Promises + Event Loop        | GPUI Background Executor (`cx.background_executor()`)   |

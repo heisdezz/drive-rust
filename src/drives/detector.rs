@@ -79,7 +79,7 @@ pub fn derive_drive_label(disk_name: &str, mount_point: &Path) -> String {
     let path_str = mount_point.to_string_lossy();
 
     if path_str == "/" {
-        return "System Drive (/)".to_string();
+        return "System Root".to_string();
     }
 
     // If mounted under /run/media/<user>/<name> or /media/<name> or /Volumes/<name>, use the folder name

@@ -4,6 +4,7 @@ pub struct Icon;
 
 impl Icon {
     pub const DASHBOARD: &'static str = "⊞";
+    pub const HOME: &'static str = "⌂";
     pub const DISCOVER: &'static str = "⌕";
     pub const MEDIA: &'static str = "▣";
     pub const ALBUMS: &'static str = "◫";
@@ -32,4 +33,7 @@ impl Icon {
     pub const REFRESH: &'static str = "↻";
     pub const THEME: &'static str = "◑";
     pub const SEARCH: &'static str = "⌕";
+    pub const STATS: &'static str = "ılı";
+    pub const MONITOR: &'static str = "□";
+    pub const DISK: &'static str = "▤";
 }

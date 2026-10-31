@@ -1,6 +1,7 @@
 use gpui_kit::*;
 use crate::state::models::Album;
 use crate::theme::AppTheme;
+use crate::theme::icons::Icon;
 
 /// Renders an individual Album card with cover preview, count badge, and manage action.
 pub fn render_album_card(
@@ -18,6 +19,7 @@ pub fn render_album_card(
         .id(SharedString::from(format!("album-card-{}", album_id)))
         .flex()
         .flex_col()
+        .h(px(180.0))
         .rounded(px(5.0))
         .border_1()
         .border_color(theme.border_card)
@@ -31,7 +33,7 @@ pub fn render_album_card(
             div()
                 .relative()
                 .w_full()
-                .h(px(96.0))
+                .h(px(108.0))
                 .bg(theme.bg_sidebar)
                 .flex()
                 .items_center()
@@ -45,7 +47,7 @@ pub fn render_album_card(
                         .child(
                             div()
                                 .text_color(theme.accent)
-                                .child(if has_preview { "▣" } else { "◫" }),
+                                .child(if has_preview { Icon::IMAGE } else { Icon::FOLDER }),
                         )
                         .child(
                             div()
@@ -75,7 +77,7 @@ pub fn render_album_card(
                         .text_color(theme.text_secondary)
                         .hover(move |s| s.bg(theme.accent).text_color(rgb(0xffffff)))
                         .on_click(on_edit_click)
-                        .child("✎"),
+                        .child(Icon::EDIT),
                 )
                 // Bottom-Left: Item count badge
                 .child(
@@ -101,21 +103,26 @@ pub fn render_album_card(
         // Album Title & Relative Path Footer
         .child(
             div()
-                .p(px(8.0))
+                .flex_1()
+                .p(px(6.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .justify_between()
                 .child(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::SEMIBOLD)
                         .text_color(theme.text_primary)
+                        .whitespace_normal()
+                        .line_clamp(2)
                         .child(album_name),
                 )
                 .child(
                     div()
                         .text_xs()
                         .text_color(theme.text_muted)
+                        .whitespace_normal()
+                        .line_clamp(1)
                         .child(format!("albums/{}", album.relative_path)),
                 ),
         )

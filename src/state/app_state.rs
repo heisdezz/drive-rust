@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
-use crate::state::models::{Album, DriveInfo, MediaFilterType, MediaSortBy, MediaItem, ScanProgress, SortOrder};
+use crate::state::models::{Album, DriveInfo, DriveType, MediaFilterType, MediaSortBy, MediaItem, ScanProgress, SortOrder};
 use crate::theme::{AppTheme, ThemeMode};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -11,6 +11,7 @@ pub enum AppRoute {
     Discover,
     Medias,
     Albums,
+    StateCounter,
     Settings,
     About,
 }
@@ -19,9 +20,10 @@ impl AppRoute {
     pub fn title(&self) -> &'static str {
         match self {
             AppRoute::Dashboard => "Dashboard",
-            AppRoute::Discover => "Discover & Scanner",
+            AppRoute::Discover => "Discover",
             AppRoute::Medias => "Media Library",
             AppRoute::Albums => "Albums",
+            AppRoute::StateCounter => "State Counter",
             AppRoute::Settings => "Settings",
             AppRoute::About => "System Info",
         }
@@ -33,6 +35,7 @@ impl AppRoute {
             AppRoute::Discover => "/discover",
             AppRoute::Medias => "/medias",
             AppRoute::Albums => "/albums",
+            AppRoute::StateCounter => "/state-counter",
             AppRoute::Settings => "/settings",
             AppRoute::About => "/about",
         }
@@ -229,11 +232,13 @@ impl AppState {
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
         if let Some(selected) = &self.selected_drive {
             if !drives.iter().any(|d| d.id == selected.id) {
-                self.selected_drive = drives.first().cloned();
+                // Previously selected drive is no longer present; pick another external drive or None
+                self.selected_drive = drives.iter().find(|d| d.drive_type != DriveType::Internal).cloned();
                 self.reopen_database();
             }
         } else if self.selected_drive.is_none() {
-            self.selected_drive = drives.first().cloned();
+            // Disabling selecting system drive by default: only auto-select non-internal (external/removable) drives
+            self.selected_drive = drives.iter().find(|d| d.drive_type != DriveType::Internal).cloned();
             self.reopen_database();
         }
 
@@ -386,5 +391,36 @@ mod tests {
         assert_eq!(state.moving_media_ids.len(), 3);
         state.close_move_modal();
         assert!(state.moving_media_ids.is_empty());
+    }
+
+    #[test]
+    fn test_set_drives_disables_selecting_system_by_default() {
+        use std::path::PathBuf;
+        let mut state = AppState::new();
+        let sys_drive = DriveInfo {
+            id: "sys:/".to_string(),
+            name: "Root".to_string(),
+            drive_type: DriveType::Internal,
+            mount_path: PathBuf::from("/"),
+            size_formatted: "500 GB".to_string(),
+            used_percentage: 50,
+            is_mounted: true,
+        };
+        state.set_drives(vec![sys_drive]);
+        // System drive should NOT be auto-selected by default
+        assert!(state.selected_drive.is_none());
+
+        let ext_drive = DriveInfo {
+            id: "usb:/mnt/usb".to_string(),
+            name: "Sandisk".to_string(),
+            drive_type: DriveType::External,
+            mount_path: PathBuf::from("/mnt/usb"),
+            size_formatted: "64 GB".to_string(),
+            used_percentage: 20,
+            is_mounted: true,
+        };
+        state.set_drives(vec![ext_drive.clone()]);
+        // External drive SHOULD be auto-selected
+        assert_eq!(state.selected_drive.as_ref().map(|d| &d.id), Some(&ext_drive.id));
     }
 }

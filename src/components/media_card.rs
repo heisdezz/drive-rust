@@ -3,6 +3,7 @@ use std::path::Path;
 use crate::drives::detector::format_bytes;
 use crate::state::models::MediaItem;
 use crate::theme::AppTheme;
+use crate::theme::icons::Icon;
 
 /// Formats media duration in seconds into `MM:SS` or `HH:MM:SS`.
 pub fn format_duration(seconds: i64) -> String {
@@ -53,6 +54,7 @@ pub fn render_media_card(
         .id(SharedString::from(format!("media-card-{}", item_id)))
         .flex()
         .flex_col()
+        .h(px(180.0))
         .rounded(px(5.0))
         .border_1()
         .border_color(border_color)
@@ -81,7 +83,7 @@ pub fn render_media_card(
                         .child(
                             div()
                                 .text_color(if is_video { theme.accent } else { theme.text_secondary })
-                                .child(if is_video { "▷" } else { "▣" }),
+                                .child(if is_video { Icon::VIDEO } else { Icon::IMAGE }),
                         )
                         .child(
                             div()
@@ -114,7 +116,7 @@ pub fn render_media_card(
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(rgb(0xffffff))
-                                .child(if is_selected { "✓" } else { "" }),
+                                .child(if is_selected { Icon::CHECK } else { "" }),
                         ),
                 )
                 // Bottom-Right: Video duration badge if video
@@ -150,15 +152,18 @@ pub fn render_media_card(
         // Metadata Footer
         .child(
             div()
+                .flex_1()
                 .p(px(6.0))
                 .flex()
                 .flex_col()
-                .gap(px(2.0))
+                .justify_between()
                 .child(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(theme.text_primary)
+                        .whitespace_normal()
+                        .line_clamp(2)
                         .child(filename),
                 )
                 .child(
