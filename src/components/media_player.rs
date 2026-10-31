@@ -1,3 +1,4 @@
+use crate::theme::icons::Icon;
 use gpui_kit::*;
 use std::path::Path;
 use crate::drives::detector::format_bytes;
@@ -18,6 +19,8 @@ pub fn render_media_player_modal(
     let show_metadata = state.player_show_metadata;
     let prev_id = state.player_prev_id;
     let next_id = state.player_next_id;
+    let zoom_fit = state.player_zoom_fit;
+    let state_zoom = app_state.clone();
 
     let item = match viewing_item {
         Some(i) => i,
@@ -93,7 +96,7 @@ pub fn render_media_player_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("× Close"),
+                                .child(format!("{} Close", Icon::CLOSE)),
                         )
                         .child(
                             div()
@@ -166,6 +169,31 @@ pub fn render_media_player_modal(
                                 })
                                 .child("Delete"),
                         )
+                        // Zoom toggle button (if image)
+                        .child(if !is_video {
+                            div()
+                                .id(SharedString::from("player-zoom-btn"))
+                                .cursor_pointer()
+                                .px(px(8.0))
+                                .py(px(3.5))
+                                .rounded(px(4.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_card)
+                                .text_xs()
+                                .text_color(theme.text_secondary)
+                                .hover(move |s| s.bg(theme.bg_card_hover).text_color(theme.text_primary))
+                                .on_click(move |_, _, cx| {
+                                    state_zoom.update(cx, |s, cx| {
+                                        s.toggle_player_zoom_fit();
+                                        cx.notify();
+                                    });
+                                })
+                                .child(if zoom_fit { "100% Zoom" } else { "Fit Window" })
+                                .into_any_element()
+                        } else {
+                            div().into_any_element()
+                        })
                         // Toggle info button
                         .child(
                             div()
@@ -231,7 +259,7 @@ pub fn render_media_player_modal(
                                             }
                                         }
                                     })
-                                    .child("‹")
+                                    .child(Icon::CHEVRON_LEFT)
                             } else {
                                 div()
                                     .id(SharedString::from("player-nav-prev-disabled"))
@@ -242,7 +270,7 @@ pub fn render_media_player_modal(
                                     .justify_center()
                                     .text_sm()
                                     .text_color(rgba(0xffffff33))
-                                    .child("‹")
+                                    .child(Icon::CHEVRON_LEFT)
                             },
                         ),
                 )
@@ -290,7 +318,7 @@ pub fn render_media_player_modal(
                                                     .justify_center()
                                                     .text_xl()
                                                     .text_color(rgb(0xffffff))
-                                                    .child("▷"),
+                                                    .child(Icon::PLAY),
                                             )
                                             .child(
                                                 div()
@@ -317,7 +345,7 @@ pub fn render_media_player_modal(
                                                     .flex()
                                                     .items_center()
                                                     .gap(px(10.0))
-                                                    .child(div().text_xs().text_color(rgb(0xffffff)).child("▷"))
+                                                    .child(div().text_xs().text_color(rgb(0xffffff)).child(Icon::PLAY))
                                                     .child(
                                                         div()
                                                             .text_xs()
@@ -448,7 +476,7 @@ pub fn render_media_player_modal(
                                             }
                                         }
                                     })
-                                    .child("›")
+                                    .child(Icon::CHEVRON_RIGHT)
                             } else {
                                 div()
                                     .id(SharedString::from("player-nav-next-disabled"))
@@ -459,7 +487,7 @@ pub fn render_media_player_modal(
                                     .justify_center()
                                     .text_sm()
                                     .text_color(rgba(0xffffff33))
-                                    .child("›")
+                                    .child(Icon::CHEVRON_RIGHT)
                             },
                         ),
                 )

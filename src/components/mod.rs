@@ -9,8 +9,10 @@ pub mod media_card;
 pub mod media_grid;
 pub mod media_player;
 pub mod move_modal;
+pub mod settings_view;
 pub mod sidebar;
 pub mod theme_picker;
+pub mod video_test_modal;
 
 pub use album_card::*;
 pub use album_grid::*;
@@ -23,5 +25,7 @@ pub use media_card::*;
 pub use media_grid::*;
 pub use media_player::*;
 pub use move_modal::*;
+pub use settings_view::*;
 pub use sidebar::*;
 pub use theme_picker::*;
+pub use video_test_modal::*;

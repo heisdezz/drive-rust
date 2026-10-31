@@ -11,7 +11,8 @@ use crate::components::album_modal::{
 use crate::components::discover_view::render_discover_view;
 use crate::components::media_player::render_media_player_modal;
 use crate::components::move_modal::render_move_to_album_modal;
-use crate::components::theme_picker::render_theme_picker;
+use crate::components::settings_view::render_settings_view;
+use crate::components::video_test_modal::render_video_test_modal;
 
 pub struct AppView {
     app_state: Entity<AppState>,
@@ -41,6 +42,7 @@ impl Render for AppView {
         let show_delete_album = state.deleting_album.is_some();
         let show_move_modal = !state.moving_media_ids.is_empty();
         let show_media_player = state.viewing_media_item.is_some();
+        let show_video_test = state.show_video_test_modal;
 
         let state_theme = self.app_state.clone();
 
@@ -259,6 +261,13 @@ impl Render for AppView {
                     div()
                 },
             )
+            .child(
+                if show_video_test {
+                    div().child(render_video_test_modal(&self.app_state, window, cx))
+                } else {
+                    div()
+                },
+            )
     }
 }
 
@@ -278,42 +287,7 @@ fn render_route_content(
         AppRoute::Discover => div().w_full().h_full().child(render_discover_view(app_state, window, cx)),
         AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
         AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)),
-        AppRoute::Settings => div()
-            .flex()
-            .flex_col()
-            .gap(px(14.0))
-            .w_full()
-            .child(
-                div()
-                    .p(px(14.0))
-                    .rounded(px(6.0))
-                    .bg(theme.bg_card)
-                    .border_1()
-                    .border_color(theme.border_card)
-                    .child(
-                        div()
-                            .text_sm()
-                            .font_weight(FontWeight::SEMIBOLD)
-                            .text_color(theme.text_primary)
-                            .child("Settings & Preferences"),
-                    )
-                    .child(
-                        div()
-                            .mt(px(4.0))
-                            .text_xs()
-                            .text_color(theme.text_muted)
-                            .child("Customize themes, layout density, and network sync configurations."),
-                    ),
-            )
-            .child(
-                div()
-                    .p(px(14.0))
-                    .rounded(px(6.0))
-                    .bg(theme.bg_card)
-                    .border_1()
-                    .border_color(theme.border_card)
-                    .child(render_theme_picker(app_state, window, cx)),
-            ),
+        AppRoute::Settings => div().w_full().h_full().child(render_settings_view(app_state, window, cx)),
         _ => div()
             .flex()
             .flex_col()

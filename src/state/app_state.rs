@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
 use crate::state::models::{Album, DriveInfo, DriveType, MediaFilterType, MediaSortBy, MediaItem, ScanProgress, SortOrder};
@@ -54,12 +55,14 @@ pub struct AppState {
 
     // Album View & Modal State
     pub selected_album_id: Option<i64>,
+    pub album_search_query: String,
     pub show_create_album_modal: bool,
     pub editing_album: Option<Album>,
 
     // Scanner & Ignore List State
     pub scan_progress: ScanProgress,
     pub user_ignore_patterns: Vec<String>,
+    pub scan_subfolder: Option<String>,
 
     // Media Catalog View State
     pub media_filter: MediaFilterType,
@@ -74,12 +77,19 @@ pub struct AppState {
     pub player_prev_id: Option<i64>,
     pub player_next_id: Option<i64>,
     pub player_show_metadata: bool,
+    pub player_zoom_fit: bool,
 
     // Advanced Modals
     pub moving_media_ids: Vec<i64>,
     pub merging_album: Option<Album>,
     pub deleting_album: Option<Album>,
     pub delete_album_permanent: bool,
+
+    // Settings & Configuration State
+    pub custom_library_path: Option<PathBuf>,
+    pub grid_columns: usize,
+    pub show_video_test_modal: bool,
+    pub test_video_url: String,
 }
 
 impl AppState {
@@ -95,10 +105,12 @@ impl AppState {
             theme: AppTheme::from_mode(default_theme_mode),
 
             selected_album_id: None,
+            album_search_query: String::new(),
             show_create_album_modal: false,
             editing_album: None,
 
             scan_progress: ScanProgress::default(),
+            scan_subfolder: None,
             user_ignore_patterns: vec![
                 "temp".to_string(),
                 "cache".to_string(),
@@ -117,11 +129,17 @@ impl AppState {
             player_prev_id: None,
             player_next_id: None,
             player_show_metadata: true,
+            player_zoom_fit: true,
 
             moving_media_ids: Vec::new(),
             merging_album: None,
             deleting_album: None,
             delete_album_permanent: false,
+
+            custom_library_path: None,
+            grid_columns: 6,
+            show_video_test_modal: false,
+            test_video_url: "http://127.0.0.1:8080/stream/4k_landscape.mp4".to_string(),
         }
     }
 
@@ -141,6 +159,14 @@ impl AppState {
         self.selected_album_id = album_id;
         self.media_page = 1;
         self.selected_media_ids.clear();
+    }
+
+    pub fn set_album_search_query(&mut self, query: String) {
+        self.album_search_query = query;
+    }
+
+    pub fn clear_album_search_query(&mut self) {
+        self.album_search_query.clear();
     }
 
     pub fn open_create_album_modal(&mut self) {
@@ -164,7 +190,6 @@ impl AppState {
         self.viewing_media_item = Some(item);
         self.player_prev_id = prev_id;
         self.player_next_id = next_id;
-        self.player_show_metadata = true;
     }
 
     pub fn close_player(&mut self) {
@@ -177,7 +202,11 @@ impl AppState {
         self.player_show_metadata = !self.player_show_metadata;
     }
 
-    // Move to album modal actions
+    pub fn toggle_player_zoom_fit(&mut self) {
+        self.player_zoom_fit = !self.player_zoom_fit;
+    }
+
+    // Move modal actions
     pub fn open_move_modal(&mut self, ids: Vec<i64>) {
         self.moving_media_ids = ids;
     }
@@ -195,6 +224,14 @@ impl AppState {
         self.merging_album = None;
     }
 
+    pub fn open_merge_album_modal(&mut self, album: Album) {
+        self.open_merge_modal(album);
+    }
+
+    pub fn close_merge_album_modal(&mut self) {
+        self.close_merge_modal();
+    }
+
     // Delete album modal actions
     pub fn open_delete_modal(&mut self, album: Album) {
         self.deleting_album = Some(album);
@@ -205,8 +242,20 @@ impl AppState {
         self.deleting_album = None;
     }
 
+    pub fn open_delete_album_modal(&mut self, album: Album) {
+        self.open_delete_modal(album);
+    }
+
+    pub fn close_delete_album_modal(&mut self) {
+        self.close_delete_modal();
+    }
+
     pub fn set_delete_permanent(&mut self, permanent: bool) {
         self.delete_album_permanent = permanent;
+    }
+
+    pub fn set_delete_album_permanent(&mut self, permanent: bool) {
+        self.set_delete_permanent(permanent);
     }
 
     // Scanner actions
@@ -229,6 +278,28 @@ impl AppState {
         self.scan_progress = ScanProgress::default();
     }
 
+    pub fn set_scan_subfolder(&mut self, subfolder: Option<String>) {
+        self.scan_subfolder = subfolder.filter(|s| !s.trim().is_empty());
+    }
+
+    pub fn pause_scan(&mut self) {
+        if self.scan_progress.is_scanning {
+            self.scan_progress.is_paused = true;
+        }
+    }
+
+    pub fn resume_scan(&mut self) {
+        if self.scan_progress.is_scanning {
+            self.scan_progress.is_paused = false;
+        }
+    }
+
+    pub fn abort_scan(&mut self) {
+        self.scan_progress.is_scanning = false;
+        self.scan_progress.is_paused = false;
+        self.scan_progress.is_stopped = true;
+    }
+
     pub fn set_drives(&mut self, drives: Vec<DriveInfo>) {
         if let Some(selected) = &self.selected_drive {
             if !drives.iter().any(|d| d.id == selected.id) {
@@ -249,8 +320,37 @@ impl AppState {
         if self.selected_drive.as_ref().map(|d| &d.id) != Some(&drive.id) {
             self.selected_drive = Some(drive);
             self.selected_album_id = None;
+            self.selected_media_ids.clear();
             self.reopen_database();
         }
+    }
+
+    pub fn eject_selected_drive(&mut self) {
+        self.selected_drive = None;
+        self.active_db = None;
+        self.selected_album_id = None;
+        self.selected_media_ids.clear();
+    }
+
+    pub fn set_custom_library_path(&mut self, path: Option<PathBuf>) {
+        self.custom_library_path = path;
+        self.reopen_database();
+    }
+
+    pub fn set_grid_columns(&mut self, cols: usize) {
+        self.grid_columns = cols.clamp(4, 9);
+    }
+
+    pub fn open_video_test_modal(&mut self) {
+        self.show_video_test_modal = true;
+    }
+
+    pub fn close_video_test_modal(&mut self) {
+        self.show_video_test_modal = false;
+    }
+
+    pub fn set_test_video_url(&mut self, url: String) {
+        self.test_video_url = url;
     }
 
     pub fn set_route(&mut self, route: AppRoute) {
@@ -290,8 +390,15 @@ impl AppState {
     }
 
     fn reopen_database(&mut self) {
-        if let Some(drive) = &self.selected_drive {
-            let db_path = drive.mount_path.join(".media_library.db");
+        let target_db = if let Some(ref custom) = self.custom_library_path {
+            Some(custom.join(".media_library.db"))
+        } else if let Some(ref drive) = self.selected_drive {
+            Some(drive.mount_path.join(".media_library.db"))
+        } else {
+            None
+        };
+
+        if let Some(db_path) = target_db {
             match LibraryDatabase::open(&db_path) {
                 Ok(db) => {
                     self.active_db = Some(Arc::new(db));
@@ -342,6 +449,18 @@ mod tests {
 
         state.close_create_album_modal();
         assert!(!state.show_create_album_modal);
+    }
+
+    #[test]
+    fn test_album_search_query_state() {
+        let mut state = AppState::new();
+        assert_eq!(state.album_search_query, "");
+
+        state.set_album_search_query("vacation".to_string());
+        assert_eq!(state.album_search_query, "vacation");
+
+        state.clear_album_search_query();
+        assert_eq!(state.album_search_query, "");
     }
 
     #[test]
@@ -422,5 +541,50 @@ mod tests {
         state.set_drives(vec![ext_drive.clone()]);
         // External drive SHOULD be auto-selected
         assert_eq!(state.selected_drive.as_ref().map(|d| &d.id), Some(&ext_drive.id));
+    }
+
+    #[test]
+    fn test_settings_custom_library_and_grid_density() {
+        let mut state = AppState::new();
+        assert_eq!(state.custom_library_path, None);
+        assert_eq!(state.grid_columns, 6);
+
+        let custom = PathBuf::from("/custom/library/folder");
+        state.set_custom_library_path(Some(custom.clone()));
+        assert_eq!(state.custom_library_path, Some(custom));
+
+        state.set_grid_columns(8);
+        assert_eq!(state.grid_columns, 8);
+
+        // Clamping check
+        state.set_grid_columns(2);
+        assert_eq!(state.grid_columns, 4);
+
+        state.set_grid_columns(20);
+        assert_eq!(state.grid_columns, 9);
+
+        // Eject check
+        state.eject_selected_drive();
+        assert!(state.selected_drive.is_none());
+        assert!(state.active_db.is_none());
+    }
+
+    #[test]
+    fn test_video_test_modal_and_zoom_state() {
+        let mut state = AppState::new();
+        assert!(!state.show_video_test_modal);
+        assert!(state.player_zoom_fit);
+
+        state.open_video_test_modal();
+        assert!(state.show_video_test_modal);
+
+        state.set_test_video_url("https://example.com/test.mp4".to_string());
+        assert_eq!(state.test_video_url, "https://example.com/test.mp4");
+
+        state.close_video_test_modal();
+        assert!(!state.show_video_test_modal);
+
+        state.toggle_player_zoom_fit();
+        assert!(!state.player_zoom_fit);
     }
 }

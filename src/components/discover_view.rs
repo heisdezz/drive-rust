@@ -1,3 +1,4 @@
+use std::sync::atomic::{AtomicBool, Ordering};
 use gpui_kit::*;
 use crate::scanner::walker::crawl_directory;
 use crate::scanner::relocator::relocate_media;
@@ -15,8 +16,22 @@ const SUGGESTED_IGNORES: &[&str] = &[
     "node_modules",
 ];
 
+const COMMON_SUBFOLDERS: &[&str] = &[
+    "DCIM",
+    "Pictures",
+    "Videos",
+    "Photos",
+    "Camera",
+    "GoPro",
+    "DJI",
+];
+
+// Global atomic controls for active crawl loop
+static SCAN_PAUSED: AtomicBool = AtomicBool::new(false);
+static SCAN_ABORTED: AtomicBool = AtomicBool::new(false);
+
 /// Renders the Media Discovery, Ignore Configuration, and Auto-Catalog Scanner view
-/// with strict monochrome typography and compact Zed spacing.
+/// with strict monochrome typography, subfolder targeting, and pause/resume/abort lifecycle controls.
 pub fn render_discover_view(
     app_state: &Entity<AppState>,
     _window: &mut Window,
@@ -28,8 +43,12 @@ pub fn render_discover_view(
     let db_opt = state.active_db.clone();
     let scan_progress = state.scan_progress.clone();
     let ignore_patterns = state.user_ignore_patterns.clone();
+    let current_subfolder = state.scan_subfolder.clone();
 
     let state_start = app_state.clone();
+    let state_pause = app_state.clone();
+    let state_resume = app_state.clone();
+    let state_abort = app_state.clone();
     let state_reset = app_state.clone();
 
     div()
@@ -40,7 +59,7 @@ pub fn render_discover_view(
         .w_full()
         .h_full()
         .overflow_y_scroll()
-        // Card 1: Target Storage Drive & Scan Directory
+        // Card 1: Target Storage Drive & Scan Directory with Subfolder Targeting
         .child(
             div()
                 .p(px(14.0))
@@ -50,7 +69,7 @@ pub fn render_discover_view(
                 .border_color(theme.border_card)
                 .flex()
                 .flex_col()
-                .gap(px(8.0))
+                .gap(px(10.0))
                 .child(
                     div()
                         .flex()
@@ -74,7 +93,11 @@ pub fn render_discover_view(
                                         .py(px(1.5))
                                         .rounded(px(3.0))
                                         .bg(if scan_progress.is_scanning {
-                                            theme.bg_pill_active
+                                            if scan_progress.is_paused {
+                                                theme.bg_pill
+                                            } else {
+                                                theme.bg_pill_active
+                                            }
                                         } else if scan_progress.found_count > 0 {
                                             theme.bg_pill
                                         } else {
@@ -82,7 +105,11 @@ pub fn render_discover_view(
                                         })
                                         .border_1()
                                         .border_color(if scan_progress.is_scanning {
-                                            theme.accent
+                                            if scan_progress.is_paused {
+                                                theme.border_card
+                                            } else {
+                                                theme.accent
+                                            }
                                         } else if scan_progress.found_count > 0 {
                                             theme.accent_success
                                         } else {
@@ -91,14 +118,24 @@ pub fn render_discover_view(
                                         .text_xs()
                                         .font_weight(FontWeight::MEDIUM)
                                         .text_color(if scan_progress.is_scanning {
-                                            theme.accent
+                                            if scan_progress.is_paused {
+                                                theme.text_secondary
+                                            } else {
+                                                theme.accent
+                                            }
                                         } else if scan_progress.found_count > 0 {
                                             theme.accent_success
                                         } else {
                                             theme.text_muted
                                         })
                                         .child(if scan_progress.is_scanning {
-                                            format!("{} Scanning...", Icon::DOT)
+                                            if scan_progress.is_paused {
+                                                format!("{} Paused", Icon::PAUSE)
+                                            } else {
+                                                format!("{} Scanning...", Icon::DOT)
+                                            }
+                                        } else if scan_progress.is_stopped {
+                                            format!("{} Aborted", Icon::STOP)
                                         } else if scan_progress.found_count > 0 {
                                             format!("{} Scan Complete", Icon::CHECK)
                                         } else {
@@ -115,44 +152,123 @@ pub fn render_discover_view(
                 )
                 .child(
                     if let Some(drive) = &drive_opt {
+                        let active_scan_path = if let Some(ref sub) = current_subfolder {
+                            drive.mount_path.join(sub)
+                        } else {
+                            drive.mount_path.clone()
+                        };
+
                         div()
-                            .p(px(10.0))
-                            .rounded(px(4.0))
-                            .bg(theme.bg_sidebar)
-                            .border_1()
-                            .border_color(theme.border_subtle)
                             .flex()
-                            .items_center()
-                            .justify_between()
+                            .flex_col()
+                            .gap(px(8.0))
                             .child(
                                 div()
+                                    .p(px(10.0))
+                                    .rounded(px(4.0))
+                                    .bg(theme.bg_sidebar)
+                                    .border_1()
+                                    .border_color(theme.border_subtle)
                                     .flex()
-                                    .flex_col()
-                                    .gap(px(2.0))
+                                    .items_center()
+                                    .justify_between()
                                     .child(
                                         div()
-                                            .text_xs()
-                                            .font_weight(FontWeight::SEMIBOLD)
-                                            .text_color(theme.text_primary)
-                                            .child(format!("Target Drive: {}", drive.name)),
+                                            .flex()
+                                            .flex_col()
+                                            .gap(px(2.0))
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::SEMIBOLD)
+                                                    .text_color(theme.text_primary)
+                                                    .child(format!("Target Drive: {}", drive.name)),
+                                            )
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .text_color(theme.text_muted)
+                                                    .child(format!("Target Path: {} • Destination: {}/albums", active_scan_path.display(), drive.mount_path.display())),
+                                            ),
                                     )
                                     .child(
                                         div()
+                                            .px(px(6.0))
+                                            .py(px(2.0))
+                                            .rounded(px(3.0))
+                                            .bg(theme.bg_pill)
                                             .text_xs()
-                                            .text_color(theme.text_muted)
-                                            .child(format!("Root Path: {} • Destination: {}/albums", drive.mount_path.display(), drive.mount_path.display())),
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(theme.text_secondary)
+                                            .child(format!("{} ({}% used)", drive.size_formatted, drive.used_percentage)),
                                     ),
                             )
+                            // Subfolder Target Selector Pills
                             .child(
                                 div()
-                                    .px(px(6.0))
-                                    .py(px(2.0))
-                                    .rounded(px(3.0))
-                                    .bg(theme.bg_pill)
-                                    .text_xs()
-                                    .font_weight(FontWeight::MEDIUM)
-                                    .text_color(theme.text_secondary)
-                                    .child(format!("{} ({}% used)", drive.size_formatted, drive.used_percentage)),
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.0))
+                                    .child(
+                                        div()
+                                            .text_xs()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(theme.text_muted)
+                                            .child("SCAN SCOPE:"),
+                                    )
+                                    // Entire Drive option
+                                    .child({
+                                        let is_root = current_subfolder.is_none();
+                                        let state_scope = app_state.clone();
+                                        div()
+                                            .id(SharedString::from("scan-scope-root"))
+                                            .cursor_pointer()
+                                            .px(px(7.0))
+                                            .py(px(2.0))
+                                            .rounded(px(3.0))
+                                            .bg(if is_root { theme.bg_pill_active } else { theme.bg_pill })
+                                            .border_1()
+                                            .border_color(if is_root { theme.accent } else { theme.border_card })
+                                            .text_xs()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(if is_root { theme.accent } else { theme.text_secondary })
+                                            .on_click(move |_, _, cx| {
+                                                state_scope.update(cx, |s, cx| {
+                                                    s.set_scan_subfolder(None);
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child(format!("{} Entire Drive", if is_root { "●" } else { "○" }))
+                                    })
+                                    .children(COMMON_SUBFOLDERS.iter().map(|&sub| {
+                                        let is_selected = current_subfolder.as_deref() == Some(sub);
+                                        let state_sub = app_state.clone();
+                                        let sub_str = sub.to_string();
+
+                                        div()
+                                            .id(SharedString::from(format!("scan-scope-{}", sub)))
+                                            .cursor_pointer()
+                                            .px(px(7.0))
+                                            .py(px(2.0))
+                                            .rounded(px(3.0))
+                                            .bg(if is_selected { theme.bg_pill_active } else { theme.bg_pill })
+                                            .border_1()
+                                            .border_color(if is_selected { theme.accent } else { theme.border_card })
+                                            .text_xs()
+                                            .font_weight(FontWeight::MEDIUM)
+                                            .text_color(if is_selected { theme.accent } else { theme.text_secondary })
+                                            .on_click(move |_, _, cx| {
+                                                state_sub.update(cx, |s, cx| {
+                                                    if is_selected {
+                                                        s.set_scan_subfolder(None);
+                                                    } else {
+                                                        s.set_scan_subfolder(Some(sub_str.clone()));
+                                                    }
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child(format!("{} {}", if is_selected { "●" } else { "○" }, sub))
+                                    }))
                             )
                     } else {
                         div()
@@ -343,8 +459,12 @@ pub fn render_discover_view(
                             if scan_progress.is_scanning {
                                 div()
                                     .text_xs()
-                                    .text_color(theme.accent)
-                                    .child(format!("{} Processing...", Icon::DOT))
+                                    .text_color(if scan_progress.is_paused { theme.text_secondary } else { theme.accent })
+                                    .child(if scan_progress.is_paused {
+                                        format!("{} Paused", Icon::PAUSE)
+                                    } else {
+                                        format!("{} Processing...", Icon::DOT)
+                                    })
                             } else {
                                 div()
                             },
@@ -444,14 +564,26 @@ pub fn render_discover_view(
                                         .text_sm()
                                         .font_weight(FontWeight::BOLD)
                                         .text_color(if scan_progress.is_scanning {
-                                            theme.accent
+                                            if scan_progress.is_paused {
+                                                theme.text_secondary
+                                            } else {
+                                                theme.accent
+                                            }
+                                        } else if scan_progress.is_stopped {
+                                            theme.accent_danger
                                         } else if scan_progress.found_count > 0 {
                                             theme.accent_success
                                         } else {
                                             theme.text_secondary
                                         })
                                         .child(if scan_progress.is_scanning {
-                                            "Scanning"
+                                            if scan_progress.is_paused {
+                                                "Paused"
+                                            } else {
+                                                "Scanning"
+                                            }
+                                        } else if scan_progress.is_stopped {
+                                            "Aborted"
                                         } else if scan_progress.found_count > 0 {
                                             "Finished"
                                         } else {
@@ -477,19 +609,20 @@ pub fn render_discover_view(
                         div()
                     },
                 )
-                // Action Buttons: Start Scan / Reset
+                // Action Buttons: Start / Pause / Resume / Abort / Reset
                 .child(
                     div()
                         .flex()
                         .items_center()
                         .gap(px(8.0))
-                        // Start Scan Button
+                        // Primary Scan / Pause / Resume / Abort Buttons
                         .child(
-                            {
-                                let can_scan = drive_opt.is_some() && db_opt.is_some() && !scan_progress.is_scanning;
+                            if !scan_progress.is_scanning {
+                                let can_scan = drive_opt.is_some() && db_opt.is_some();
                                 let drive = drive_opt.clone();
                                 let db = db_opt.clone();
                                 let user_patterns = ignore_patterns.clone();
+                                let target_sub = current_subfolder.clone();
 
                                 div()
                                     .id(SharedString::from("start-scan-btn"))
@@ -517,9 +650,15 @@ pub fn render_discover_view(
 
                                         let patterns = user_patterns.clone();
                                         let state = state_start.clone();
+                                        let sub = target_sub.clone();
+
+                                        SCAN_PAUSED.store(false, Ordering::SeqCst);
+                                        SCAN_ABORTED.store(false, Ordering::SeqCst);
 
                                         state.update(cx, |s, cx| {
                                             s.scan_progress.is_scanning = true;
+                                            s.scan_progress.is_paused = false;
+                                            s.scan_progress.is_stopped = false;
                                             s.scan_progress.scanned_count = 0;
                                             s.scan_progress.found_count = 0;
                                             cx.notify();
@@ -528,14 +667,18 @@ pub fn render_discover_view(
                                         cx.spawn(move |cx: &mut AsyncApp| {
                                             let cx = cx.clone();
                                             let state = state.clone();
-                                            let mount_path = drive.mount_path.clone();
+                                            let scan_root = if let Some(ref s) = sub {
+                                                drive.mount_path.join(s)
+                                            } else {
+                                                drive.mount_path.clone()
+                                            };
 
                                             async move {
                                                 // Run filesystem crawl on background executor
                                                 let discovered = cx
                                                     .background_executor()
                                                     .spawn(async move {
-                                                        crawl_directory(&mount_path, &patterns).unwrap_or_default()
+                                                        crawl_directory(&scan_root, &patterns).unwrap_or_default()
                                                     })
                                                     .await;
 
@@ -543,6 +686,31 @@ pub fn render_discover_view(
                                                 let mut imported = 0;
 
                                                 for item in discovered {
+                                                    // Check if aborted
+                                                    if SCAN_ABORTED.load(Ordering::SeqCst) {
+                                                        let _ = state.update(&mut cx.clone(), |s, cx| {
+                                                            s.scan_progress.is_scanning = false;
+                                                            s.scan_progress.is_stopped = true;
+                                                            s.scan_progress.current_folder = "Aborted".to_string();
+                                                            cx.notify();
+                                                        });
+                                                        return;
+                                                    }
+
+                                                    // Active pause check
+                                                    while SCAN_PAUSED.load(Ordering::SeqCst) {
+                                                        std::thread::sleep(std::time::Duration::from_millis(150));
+                                                        if SCAN_ABORTED.load(Ordering::SeqCst) {
+                                                            let _ = state.update(&mut cx.clone(), |s, cx| {
+                                                                s.scan_progress.is_scanning = false;
+                                                                s.scan_progress.is_stopped = true;
+                                                                s.scan_progress.current_folder = "Aborted".to_string();
+                                                                cx.notify();
+                                                            });
+                                                            return;
+                                                        }
+                                                    }
+
                                                     let mount = drive.mount_path.clone();
                                                     let db_ref = db.clone();
                                                     let item_clone = item.clone();
@@ -569,6 +737,7 @@ pub fn render_discover_view(
 
                                                 let _ = state.update(&mut cx.clone(), |s, cx| {
                                                     s.scan_progress.is_scanning = false;
+                                                    s.scan_progress.is_paused = false;
                                                     s.scan_progress.scanned_count = total_discovered;
                                                     s.scan_progress.found_count = imported;
                                                     s.scan_progress.current_folder = "Complete".to_string();
@@ -582,13 +751,96 @@ pub fn render_discover_view(
                                             .text_xs()
                                             .font_weight(FontWeight::SEMIBOLD)
                                             .text_color(if can_scan { rgb(0xffffff) } else { theme.text_muted })
-                                            .child(if scan_progress.is_scanning {
-                                                format!("{} Scanning...", Icon::DOT)
-                                            } else {
-                                                format!("{} Start Discovery Scan", Icon::PLAY)
-                                            }),
+                                            .child(format!("{} Start Discovery Scan", Icon::PLAY)),
                                     )
-                            },
+                                    .into_any_element()
+                            } else {
+                                // Scanning is active: Provide Pause / Resume and Abort controls
+                                div()
+                                    .flex()
+                                    .items_center()
+                                    .gap(px(6.0))
+                                    .child(
+                                        if !scan_progress.is_paused {
+                                            div()
+                                                .id(SharedString::from("pause-scan-btn"))
+                                                .cursor_pointer()
+                                                .px(px(10.0))
+                                                .py(px(6.0))
+                                                .rounded(px(4.0))
+                                                .bg(theme.bg_pill)
+                                                .border_1()
+                                                .border_color(theme.border_card)
+                                                .hover(move |s| s.bg(theme.bg_card_hover).border_color(theme.accent))
+                                                .on_click(move |_, _, cx| {
+                                                    SCAN_PAUSED.store(true, Ordering::SeqCst);
+                                                    state_pause.update(cx, |s, cx| {
+                                                        s.pause_scan();
+                                                        cx.notify();
+                                                    });
+                                                })
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .font_weight(FontWeight::MEDIUM)
+                                                        .text_color(theme.text_primary)
+                                                        .child(format!("{} Pause", Icon::PAUSE)),
+                                                )
+                                                .into_any_element()
+                                        } else {
+                                            div()
+                                                .id(SharedString::from("resume-scan-btn"))
+                                                .cursor_pointer()
+                                                .px(px(10.0))
+                                                .py(px(6.0))
+                                                .rounded(px(4.0))
+                                                .bg(theme.accent)
+                                                .text_color(rgb(0xffffff))
+                                                .hover(move |s| s.bg(theme.accent_hover))
+                                                .on_click(move |_, _, cx| {
+                                                    SCAN_PAUSED.store(false, Ordering::SeqCst);
+                                                    state_resume.update(cx, |s, cx| {
+                                                        s.resume_scan();
+                                                        cx.notify();
+                                                    });
+                                                })
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .font_weight(FontWeight::MEDIUM)
+                                                        .child(format!("{} Resume", Icon::PLAY)),
+                                                )
+                                                .into_any_element()
+                                        }
+                                    )
+                                    .child(
+                                        div()
+                                            .id(SharedString::from("abort-scan-btn"))
+                                            .cursor_pointer()
+                                            .px(px(10.0))
+                                            .py(px(6.0))
+                                            .rounded(px(4.0))
+                                            .bg(theme.bg_pill)
+                                            .border_1()
+                                            .border_color(theme.accent_danger)
+                                            .hover(move |s| s.bg(theme.bg_card_hover))
+                                            .on_click(move |_, _, cx| {
+                                                SCAN_ABORTED.store(true, Ordering::SeqCst);
+                                                state_abort.update(cx, |s, cx| {
+                                                    s.abort_scan();
+                                                    cx.notify();
+                                                });
+                                            })
+                                            .child(
+                                                div()
+                                                    .text_xs()
+                                                    .font_weight(FontWeight::MEDIUM)
+                                                    .text_color(theme.accent_danger)
+                                                    .child(format!("{} Abort", Icon::STOP)),
+                                            ),
+                                    )
+                                    .into_any_element()
+                            }
                         )
                         // Reset Metrics Button
                         .child(
