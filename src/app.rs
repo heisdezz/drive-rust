@@ -30,7 +30,6 @@ impl Render for AppView {
             .h_full()
             .bg(rgb(0x020617)) // Slate-950 main canvas
             .text_color(rgb(0xf8fafc))
-            .font_family(".SystemUIFont")
             // Left: Navigation & Drives Sidebar
             .child(render_sidebar(&self.app_state, window, cx))
             // Right: Main App Canvas
