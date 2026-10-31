@@ -1,33 +1,3 @@
-# Implementation Steps: Rust Drive Desktop
-
-> **Porting [[heisdezz/drive](https://github.com/heisdezz/drive)] to Native Rust with GPUI & GPUI-Kit**  
-> Complete architecture and context documentation is maintained in Obsidian format under [`context/`](context/00_Index.md).
-
----
-
-## Core Development Guidelines
-
-1. **Incremental Execution**: Do not one-shot the entire UI or system logic at once. Each step represents a distinct, testable component or module.
-2. **Simple Database Logic**: Use direct, explicit `rusqlite` queries with prepared statements and transactions. Avoid over-engineered ORMs.
-3. **Component-by-Component UI**: Build and verify individual GPUI / `gpui-kit` components (Sidebar, DriveCard, MediaCard, AlbumCard, Modals) in isolation before composing them into complete views.
-4. **Context Maintenance**: Update files in `context/` as each milestone is completed so future agents or developers can seamlessly resume progress.
-
----
-
-## Phased Implementation Roadmap
-
-### Phase 1: Project Setup & Core Models ✅
-
-- [x] **Step 1.1**: Initialize `Cargo.toml` with `gpui-kit` (0.8.1), `rusqlite`, `sysinfo`, `image`, `tokio`, `serde`, and `chrono`.
-- [x] **Step 1.2**: Define domain models in `src/state/models.rs` (`DriveInfo`, `MediaItem`, `Album`, `Tag`, `ScanProgress`). Verify with serialization unit tests.
-
-### Phase 2: Simple SQLite Database Layer (`rusqlite`) ✅
-
-- [x] **Step 2.1**: Implement `src/db/schema.rs` with tables (`media_items`, `albums`, `scan_album_sources`, `tags`, `media_tags`) and triggers maintaining `albums.media_count`. Ensure fallback `unknown` album exists.
-- [x] **Step 2.2**: Implement basic queries in `src/db/media.rs` and `src/db/albums.rs` (CRUD, pagination, count maintenance, next/prev seek). Verify with `:memory:` unit tests.
-
-### Phase 3: Removable Drive Detection ✅
-
 - [x] **Step 3.1**: Implement `src/drives/detector.rs` using `sysinfo::Disks`. Filter out system partitions (`/sys`, `/proc`, `/boot`, etc.) and classify drives (`Internal`, `External`, `Network`).
 - [x] **Step 3.2**: Add background drive polling loop (`DriveMonitor`) in `src/drives/mod.rs` updating listeners when USB drives are connected or removed.
 
@@ -37,11 +7,11 @@
 - [x] **Step 4.2**: Implement `src/components/drive_card.rs` using `gpui-kit` (drive icon, name, formatted size, storage usage bar, mount badge).
 - [x] **Step 4.3**: Implement `src/components/sidebar.rs` (navigation links + connected drive cards list). Clicking drives switches active drive in `AppState`.
 
-### Phase 5: Component 2: `MediaCard` & `MediaGrid` (Catalog View)
+### Phase 5: Component 2: `MediaCard` & `MediaGrid` (Catalog View) ✅
 
-- [ ] **Step 5.1**: Implement `src/components/media_card.rs` (image thumbnail preview, rounded corners, selection checkbox, video duration badge).
-- [ ] **Step 5.2**: Implement `src/components/filter_bar.rs` (debounced search input, type filter tabs `All`/`Images`/`Videos`, sort selector).
-- [ ] **Step 5.3**: Implement `src/components/media_grid.rs` with responsive columns and pagination controls. Connect to SQLite database.
+- [x] **Step 5.1**: Implement `src/components/media_card.rs` (image thumbnail preview, rounded corners, selection checkbox, video duration badge).
+- [x] **Step 5.2**: Implement `src/components/filter_bar.rs` (debounced search input, type filter tabs `All`/`Images`/`Videos`, sort selector).
+- [x] **Step 5.3**: Implement `src/components/media_grid.rs` with responsive columns and pagination controls. Connect to SQLite database.
 
 ### Phase 6: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View)
 

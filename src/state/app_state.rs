@@ -1,6 +1,7 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 use crate::db::LibraryDatabase;
-use crate::state::models::DriveInfo;
+use crate::state::models::{DriveInfo, MediaFilterType, MediaSortBy, SortOrder};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AppRoute {
@@ -42,6 +43,14 @@ pub struct AppState {
     pub drives: Vec<DriveInfo>,
     pub selected_drive: Option<DriveInfo>,
     pub active_db: Option<Arc<LibraryDatabase>>,
+
+    // Media Catalog View State
+    pub media_filter: MediaFilterType,
+    pub media_sort_by: MediaSortBy,
+    pub media_sort_order: SortOrder,
+    pub media_page: usize,
+    pub media_page_size: usize,
+    pub selected_media_ids: HashSet<i64>,
 }
 
 impl AppState {
@@ -51,6 +60,13 @@ impl AppState {
             drives: Vec::new(),
             selected_drive: None,
             active_db: None,
+
+            media_filter: MediaFilterType::All,
+            media_sort_by: MediaSortBy::Date,
+            media_sort_order: SortOrder::Desc,
+            media_page: 1,
+            media_page_size: 24,
+            selected_media_ids: HashSet::new(),
         }
     }
 
@@ -78,6 +94,38 @@ impl AppState {
 
     pub fn set_route(&mut self, route: AppRoute) {
         self.active_route = route;
+    }
+
+    pub fn set_media_filter(&mut self, filter: MediaFilterType) {
+        self.media_filter = filter;
+        self.media_page = 1;
+    }
+
+    pub fn set_media_sort_by(&mut self, sort: MediaSortBy) {
+        self.media_sort_by = sort;
+    }
+
+    pub fn toggle_media_sort_order(&mut self) {
+        self.media_sort_order = match self.media_sort_order {
+            SortOrder::Asc => SortOrder::Desc,
+            SortOrder::Desc => SortOrder::Asc,
+        };
+    }
+
+    pub fn set_media_page(&mut self, page: usize) {
+        self.media_page = page.max(1);
+    }
+
+    pub fn toggle_media_selection(&mut self, id: i64) {
+        if self.selected_media_ids.contains(&id) {
+            self.selected_media_ids.remove(&id);
+        } else {
+            self.selected_media_ids.insert(id);
+        }
+    }
+
+    pub fn clear_media_selection(&mut self) {
+        self.selected_media_ids.clear();
     }
 
     fn reopen_database(&mut self) {

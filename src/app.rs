@@ -1,6 +1,7 @@
 use gpui_kit::*;
 use crate::state::app_state::{AppRoute, AppState};
 use crate::components::sidebar::render_sidebar;
+use crate::components::media_grid::render_media_grid;
 
 pub struct AppView {
     app_state: Entity<AppState>,
@@ -137,89 +138,98 @@ impl Render for AppView {
                             .flex_grow(1.0)
                             .p(px(14.0))
                             .overflow_y_hidden()
-                            .child(render_route_content(active_route, selected_drive.as_ref())),
+                            .child(render_route_content(&self.app_state, active_route, selected_drive.as_ref(), window, cx)),
                     ),
             )
     }
 }
 
 /// Renders the content panel for the currently selected route.
-fn render_route_content(route: AppRoute, selected_drive: Option<&crate::state::models::DriveInfo>) -> impl IntoElement {
-    div()
-        .flex()
-        .flex_col()
-        .gap(px(10.0))
-        .child(
-            div()
-                .p(px(14.0))
-                .rounded(px(6.0))
-                .bg(rgb(0x181a20))
-                .border_1()
-                .border_color(rgb(0x23262d))
-                .child(
-                    div()
-                        .text_sm()
-                        .font_weight(FontWeight::SEMIBOLD)
-                        .text_color(rgb(0xf4f4f5))
-                        .child(format!("{} View", route.title())),
-                )
-                .child(
-                    div()
-                        .mt(px(4.0))
-                        .text_xs()
-                        .text_color(rgb(0x8e8e93))
-                        .child(match route {
-                            AppRoute::Dashboard => "Welcome to Rust Drive. Select an external storage drive from the sidebar to inspect or organize its media library.",
-                            AppRoute::Discover => "Scan storage drives, configure folder ignore patterns, and auto-catalog media files into albums.",
-                            AppRoute::Medias => "Browse, filter, and search media files indexed on the active external drive.",
-                            AppRoute::Albums => "Manage physical album directories, view media counts, and merge or edit albums.",
-                            AppRoute::Settings => "Configure LAN Mobile Sync, Google Drive backups, and UI grid column preferences.",
-                            AppRoute::About => "Native Rust port powered by GPUI and GPUI-Kit with direct SQLite storage.",
-                        }),
-                )
-                .child(
-                    if let Some(drive) = selected_drive {
+fn render_route_content(
+    app_state: &Entity<AppState>,
+    route: AppRoute,
+    selected_drive: Option<&crate::state::models::DriveInfo>,
+    window: &mut Window,
+    cx: &mut App,
+) -> impl IntoElement {
+    match route {
+        AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
+        _ => div()
+            .flex()
+            .flex_col()
+            .gap(px(10.0))
+            .child(
+                div()
+                    .p(px(14.0))
+                    .rounded(px(6.0))
+                    .bg(rgb(0x181a20))
+                    .border_1()
+                    .border_color(rgb(0x23262d))
+                    .child(
                         div()
-                            .mt(px(12.0))
-                            .p(px(10.0))
-                            .rounded(px(5.0))
-                            .bg(rgb(0x1c1e24))
-                            .border_1()
-                            .border_color(rgb(0x272a31))
-                            .flex()
-                            .flex_col()
-                            .gap(px(3.0))
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .font_weight(FontWeight::SEMIBOLD)
-                                    .text_color(rgb(0x60a5fa))
-                                    .child(format!("Selected Drive: {}", drive.name)),
-                            )
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .text_color(rgb(0xa1a1aa))
-                                    .child(format!("Mount Path: {}", drive.mount_path.display())),
-                            )
-                            .child(
-                                div()
-                                    .text_xs()
-                                    .text_color(rgb(0xa1a1aa))
-                                    .child(format!("Capacity: {} ({}% used)", drive.size_formatted, drive.used_percentage)),
-                            )
-                    } else {
+                            .text_sm()
+                            .font_weight(FontWeight::SEMIBOLD)
+                            .text_color(rgb(0xf4f4f5))
+                            .child(format!("{} View", route.title())),
+                    )
+                    .child(
                         div()
-                            .mt(px(12.0))
-                            .p(px(10.0))
-                            .rounded(px(5.0))
-                            .bg(rgb(0x1c1e24))
-                            .border_1()
-                            .border_color(rgb(0x272a31))
+                            .mt(px(4.0))
                             .text_xs()
-                            .text_color(rgb(0xfbbf24))
-                            .child("⚠️ No external drive selected. Connect a USB drive or select one from the sidebar.")
-                    },
-                ),
-        )
+                            .text_color(rgb(0x8e8e93))
+                            .child(match route {
+                                AppRoute::Dashboard => "Welcome to Rust Drive. Select an external storage drive from the sidebar to inspect or organize its media library.",
+                                AppRoute::Discover => "Scan storage drives, configure folder ignore patterns, and auto-catalog media files into albums.",
+                                AppRoute::Medias => "Browse, filter, and search media files indexed on the active external drive.",
+                                AppRoute::Albums => "Manage physical album directories, view media counts, and merge or edit albums.",
+                                AppRoute::Settings => "Configure LAN Mobile Sync, Google Drive backups, and UI grid column preferences.",
+                                AppRoute::About => "Native Rust port powered by GPUI and GPUI-Kit with direct SQLite storage.",
+                            }),
+                    )
+                    .child(
+                        if let Some(drive) = selected_drive {
+                            div()
+                                .mt(px(12.0))
+                                .p(px(10.0))
+                                .rounded(px(5.0))
+                                .bg(rgb(0x1c1e24))
+                                .border_1()
+                                .border_color(rgb(0x272a31))
+                                .flex()
+                                .flex_col()
+                                .gap(px(3.0))
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_color(rgb(0x60a5fa))
+                                        .child(format!("Selected Drive: {}", drive.name)),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(rgb(0xa1a1aa))
+                                        .child(format!("Mount Path: {}", drive.mount_path.display())),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(rgb(0xa1a1aa))
+                                        .child(format!("Capacity: {} ({}% used)", drive.size_formatted, drive.used_percentage)),
+                                )
+                        } else {
+                            div()
+                                .mt(px(12.0))
+                                .p(px(10.0))
+                                .rounded(px(5.0))
+                                .bg(rgb(0x1c1e24))
+                                .border_1()
+                                .border_color(rgb(0x272a31))
+                                .text_xs()
+                                .text_color(rgb(0xfbbf24))
+                                .child("⚠️ No external drive selected. Connect a USB drive or select one from the sidebar.")
+                        },
+                    ),
+            ),
+    }
 }
