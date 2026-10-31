@@ -31,11 +31,11 @@
 - [x] **Step 3.1**: Implement `src/drives/detector.rs` using `sysinfo::Disks`. Filter out system partitions (`/sys`, `/proc`, `/boot`, etc.) and classify drives (`Internal`, `External`, `Network`).
 - [x] **Step 3.2**: Add background drive polling loop (`DriveMonitor`) in `src/drives/mod.rs` updating listeners when USB drives are connected or removed.
 
-### Phase 4: GPUI Frame & Component 1: `Sidebar` & `DriveCard`
+### Phase 4: GPUI Frame & Component 1: `Sidebar` & `DriveCard` ✅
 
-- [ ] **Step 4.1**: Set up GPUI window bootstrap with dark theme and root layout frame in `src/main.rs` and `src/app.rs`.
-- [ ] **Step 4.2**: Implement `src/components/drive_card.rs` using `gpui-kit` (drive icon, name, formatted size, storage usage bar, mount badge).
-- [ ] **Step 4.3**: Implement `src/components/sidebar.rs` (navigation links + connected drive cards list). Clicking drives switches active drive in `AppState`.
+- [x] **Step 4.1**: Set up GPUI window bootstrap with dark theme and root layout frame in `src/main.rs` and `src/app.rs`.
+- [x] **Step 4.2**: Implement `src/components/drive_card.rs` using `gpui-kit` (drive icon, name, formatted size, storage usage bar, mount badge).
+- [x] **Step 4.3**: Implement `src/components/sidebar.rs` (navigation links + connected drive cards list). Clicking drives switches active drive in `AppState`.
 
 ### Phase 5: Component 2: `MediaCard` & `MediaGrid` (Catalog View)
 
