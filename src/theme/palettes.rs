@@ -25,11 +25,11 @@ impl ThemeMode {
 
     pub fn icon(&self) -> &'static str {
         match self {
-            ThemeMode::ZedDark => "🌙",
-            ThemeMode::CatppuccinMocha => "☕",
-            ThemeMode::TokyoNight => "🌃",
-            ThemeMode::Nord => "❄️",
-            ThemeMode::ZedLight => "☀️",
+            ThemeMode::ZedDark => "◑",
+            ThemeMode::CatppuccinMocha => "◐",
+            ThemeMode::TokyoNight => "◒",
+            ThemeMode::Nord => "◓",
+            ThemeMode::ZedLight => "○",
         }
     }
 
@@ -114,13 +114,13 @@ impl AppTheme {
                 bg_canvas: rgb(0x1e1e2e),
                 bg_sidebar: rgb(0x181825),
                 bg_header: rgb(0x11111b),
-                bg_card: rgb(0x24273a),
-                bg_card_hover: rgb(0x2f334d),
-                bg_input: rgb(0x313244),
-                bg_pill: rgb(0x26293b),
-                bg_pill_active: rgb(0x45475a),
+                bg_card: rgb(0x313244),
+                bg_card_hover: rgb(0x45475a),
+                bg_input: rgb(0x1e1e2e),
+                bg_pill: rgb(0x313244),
+                bg_pill_active: rgb(0x585b70),
                 border_subtle: rgb(0x313244),
-                border_card: rgb(0x363a4f),
+                border_card: rgb(0x45475a),
                 border_active: rgb(0xcba6f7),
                 text_primary: rgb(0xcdd6f4),
                 text_secondary: rgb(0xa6adc8),

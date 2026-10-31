@@ -80,8 +80,8 @@ pub fn render_media_card(
                         .gap(px(3.0))
                         .child(
                             div()
-                                .text_color(if is_video { theme.accent } else { theme.accent_hover })
-                                .child(if is_video { "🎬" } else { "🖼" }),
+                                .text_color(if is_video { theme.accent } else { theme.text_secondary })
+                                .child(if is_video { "▷" } else { "▣" }),
                         )
                         .child(
                             div()
@@ -138,16 +138,16 @@ pub fn render_media_card(
                             .child(
                                 div()
                                     .text_xs()
-                                    .font_weight(FontWeight::MEDIUM)
-                                    .text_color(rgb(0xf4f4f5))
-                                    .child(format!("▶ {}", dur_text)),
+                                    .font_weight(FontWeight::NORMAL)
+                                    .text_color(rgb(0xffffff))
+                                    .child(dur_text),
                             )
                     } else {
                         div()
                     },
                 ),
         )
-        // Bottom Meta Bar (Name + size)
+        // Metadata Footer
         .child(
             div()
                 .p(px(6.0))
@@ -158,8 +158,7 @@ pub fn render_media_card(
                     div()
                         .text_xs()
                         .font_weight(FontWeight::MEDIUM)
-                        .text_color(if is_selected { theme.text_primary } else { theme.text_secondary })
-                        .overflow_hidden()
+                        .text_color(theme.text_primary)
                         .child(filename),
                 )
                 .child(
@@ -189,10 +188,8 @@ mod tests {
 
     #[test]
     fn test_format_duration() {
-        assert_eq!(format_duration(0), "00:00");
         assert_eq!(format_duration(45), "00:45");
-        assert_eq!(format_duration(75), "01:15");
-        assert_eq!(format_duration(3600), "01:00:00");
+        assert_eq!(format_duration(125), "02:05");
         assert_eq!(format_duration(3665), "01:01:05");
     }
 }

@@ -50,7 +50,7 @@ pub fn render_create_album_modal(
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child("📁 Create New Album"),
+                                .child("Create New Album"),
                         )
                         .child(
                             div()
@@ -65,7 +65,7 @@ pub fn render_create_album_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕"),
+                                .child("×"),
                         ),
                 )
                 .child(
@@ -220,7 +220,7 @@ pub fn render_edit_album_modal(
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child(format!("✎ Manage Album: {}", album_name)),
+                                .child(format!("Manage Album: {}", album_name)),
                         )
                         .child(
                             div()
@@ -235,7 +235,7 @@ pub fn render_edit_album_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕"),
+                                .child("×"),
                         ),
                 )
                 .child(
@@ -427,7 +427,7 @@ pub fn render_merge_album_modal(
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child(format!("🔀 Merge '{}' Into...", source_name)),
+                                .child(format!("Merge '{}' Into...", source_name)),
                         )
                         .child(
                             div()
@@ -442,7 +442,7 @@ pub fn render_merge_album_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕"),
+                                .child("×"),
                         ),
                 )
                 .child(
@@ -525,7 +525,7 @@ pub fn render_merge_album_modal(
                                                 .flex()
                                                 .items_center()
                                                 .gap(px(8.0))
-                                                .child(div().text_sm().child("📁"))
+                                                .child(div().text_xs().text_color(theme.text_muted).child("◫"))
                                                 .child(
                                                     div()
                                                         .text_xs()
@@ -634,7 +634,7 @@ pub fn render_delete_album_modal(
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.accent_danger)
-                                .child(format!("🗑 Delete Album: {}", album_name)),
+                                .child(format!("Delete Album: {}", album_name)),
                         )
                         .child(
                             div()
@@ -649,7 +649,7 @@ pub fn render_delete_album_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕"),
+                                .child("×"),
                         ),
                 )
                 .child(
@@ -690,7 +690,7 @@ pub fn render_delete_album_modal(
                                                 .flex()
                                                 .items_center()
                                                 .gap(px(6.0))
-                                                .child(div().text_xs().child(if !is_permanent { "🔘" } else { "⚪" }))
+                                                .child(div().text_xs().text_color(theme.accent).child(if !is_permanent { "●" } else { "○" }))
                                                 .child(
                                                     div()
                                                         .text_xs()
@@ -734,7 +734,7 @@ pub fn render_delete_album_modal(
                                                 .flex()
                                                 .items_center()
                                                 .gap(px(6.0))
-                                                .child(div().text_xs().child(if is_permanent { "🔘" } else { "⚪" }))
+                                                .child(div().text_xs().text_color(theme.accent_danger).child(if is_permanent { "●" } else { "○" }))
                                                 .child(
                                                     div()
                                                         .text_xs()

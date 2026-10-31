@@ -93,7 +93,7 @@ pub fn render_media_player_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕ Close"),
+                                .child("× Close"),
                         )
                         .child(
                             div()
@@ -139,7 +139,7 @@ pub fn render_media_player_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("📁 Move to Album"),
+                                .child("Move to Album"),
                         )
                         // Delete item button
                         .child(
@@ -164,7 +164,7 @@ pub fn render_media_player_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("🗑 Delete"),
+                                .child("Delete"),
                         )
                         // Toggle info button
                         .child(
@@ -187,7 +187,7 @@ pub fn render_media_player_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("ℹ Info"),
+                                .child("Info"),
                         ),
                 ),
         )
@@ -231,7 +231,7 @@ pub fn render_media_player_modal(
                                             }
                                         }
                                     })
-                                    .child("◀")
+                                    .child("‹")
                             } else {
                                 div()
                                     .id(SharedString::from("player-nav-prev-disabled"))
@@ -242,7 +242,7 @@ pub fn render_media_player_modal(
                                     .justify_center()
                                     .text_sm()
                                     .text_color(rgba(0xffffff33))
-                                    .child("◀")
+                                    .child("‹")
                             },
                         ),
                 )
@@ -290,7 +290,7 @@ pub fn render_media_player_modal(
                                                     .justify_center()
                                                     .text_xl()
                                                     .text_color(rgb(0xffffff))
-                                                    .child("▶"),
+                                                    .child("▷"),
                                             )
                                             .child(
                                                 div()
@@ -317,7 +317,7 @@ pub fn render_media_player_modal(
                                                     .flex()
                                                     .items_center()
                                                     .gap(px(10.0))
-                                                    .child(div().text_xs().text_color(rgb(0xffffff)).child("▶"))
+                                                    .child(div().text_xs().text_color(rgb(0xffffff)).child("▷"))
                                                     .child(
                                                         div()
                                                             .text_xs()
@@ -348,8 +348,8 @@ pub fn render_media_player_modal(
                                                     .flex()
                                                     .items_center()
                                                     .gap(px(8.0))
-                                                    .child(div().text_xs().text_color(theme.text_muted).child("🔊"))
-                                                    .child(div().text_xs().text_color(theme.text_muted).child("⛶")),
+                                                    .child(div().text_xs().text_color(theme.text_muted).child("VOL"))
+                                                    .child(div().text_xs().text_color(theme.text_muted).child("EXP")),
                                             ),
                                     )
                             } else {
@@ -371,7 +371,8 @@ pub fn render_media_player_modal(
                                     .child(
                                         div()
                                             .text_2xl()
-                                            .child("🖼"),
+                                            .text_color(theme.text_secondary)
+                                            .child("▣"),
                                     )
                                     .child(
                                         div()
@@ -447,7 +448,7 @@ pub fn render_media_player_modal(
                                             }
                                         }
                                     })
-                                    .child("▶")
+                                    .child("›")
                             } else {
                                 div()
                                     .id(SharedString::from("player-nav-next-disabled"))
@@ -458,7 +459,7 @@ pub fn render_media_player_modal(
                                     .justify_center()
                                     .text_sm()
                                     .text_color(rgba(0xffffff33))
-                                    .child("▶")
+                                    .child("›")
                             },
                         ),
                 )

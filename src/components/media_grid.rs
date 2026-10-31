@@ -256,7 +256,7 @@ pub fn render_media_grid(
                                                     cx.notify();
                                                 });
                                             })
-                                            .child("📁 Move to Album..."),
+                                            .child("Move to Album..."),
                                     )
                                     // Delete Selected Action
                                     .child(
@@ -281,7 +281,7 @@ pub fn render_media_grid(
                                                     cx.notify();
                                                 });
                                             })
-                                            .child("🗑 Delete"),
+                                            .child("Delete"),
                                     )
                                     .child(
                                         div()

@@ -6,83 +6,100 @@ Porting `heisdezz/drive` from Electrobun (SolidJS + WebKit) to native Rust using
 
 ---
 
-### Phase 1: Setup & Domain Models ✅
+### Core Architecture Phases (Completed)
 
-- [x] **Step 1.1**: Initialize workspace and `Cargo.toml` dependencies (`gpui-kit`, `rusqlite`, `sysinfo`, `image`, `tokio`, `serde`, `chrono`).
-- [x] **Step 1.2**: Define domain models in `src/state/models.rs` (`DriveInfo`, `MediaItem`, `Album`, `Tag`, `ScanProgress`, filters, sort enums).
-- [x] **Step 1.3**: Configure linker (`clang` + system `lld`) and incremental dev caching.
-
-### Phase 2: SQLite Database Layer ✅
-
-- [x] **Step 2.1**: Schema initialization in `src/db/schema.rs` with automatic count triggers and default `unknown` album.
-- [x] **Step 2.2**: Album query operations in `src/db/albums.rs` (create, rename, list, count).
-- [x] **Step 2.3**: Media item query operations in `src/db/media.rs` (insert, paginated query with filters, neighbor seeking, move).
-
-### Phase 3: Removable Drive Detection ✅
-
-- [x] **Step 3.1**: System mount filtering and removable volume detector in `src/drives/detector.rs` using `sysinfo::Disks`.
-- [x] **Step 3.2**: Background drive monitor loop in `src/drives/mod.rs` with periodic polling on GPUI background executor.
-
-### Phase 4: GPUI Frame & Component 1 (`Sidebar` & `DriveCard`) ✅
-
-- [x] **Step 4.1**: Window setup and compact Zed-style layout frame in `src/main.rs` and `src/app.rs`.
-- [x] **Step 4.2**: Implement `src/components/drive_card.rs` with disk/USB indicators, volume label, storage progress bar, and percentage badge.
-- [x] **Step 4.3**: Implement `src/components/sidebar.rs`: App header, reactive navigation links, connected drives list with selection highlight.
-
-### Phase 5: Component 2 (`MediaCard` & `MediaGrid` Catalog View) ✅
-
-- [x] **Step 5.1**: Implement `src/components/media_card.rs` (aspect ratio thumbnail preview, selection checkbox, video duration badge `▶ MM:SS`, metadata footer).
-- [x] **Step 5.2**: Implement `src/components/filter_bar.rs` (segmented type buttons `All`/`Images`/`Videos`, sort criteria `Date`/`Name`/`Size`, direction toggle, item count).
-- [x] **Step 5.3**: Implement `src/components/media_grid.rs` with responsive card layout, Zed pagination bar (`Page X of Y`, `Prev`, `Next`, multi-selection). Wired to `AppRoute::Medias`.
-
-### Phase 6: Dynamic Theming Engine & Theme Switcher ✅
-
-- [x] **Step 6.1**: Implement `src/theme/mod.rs` and `src/theme/palettes.rs` with 5 themes (`ZedDark`, `CatppuccinMocha`, `TokyoNight`, `Nord`, `ZedLight`) and semantic tokens.
-- [x] **Step 6.2**: Add `theme_mode` and resolved `AppTheme` to `AppState` with reactive `cycle_theme()` and `set_theme_mode()`.
-- [x] **Step 6.3**: Add quick-toggle in header and visual `ThemePicker` in Settings. Refactor all components to consume theme tokens.
-
-### Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View) ✅
-
-- [x] **Step 7.1: Build `AlbumCard` Component**
-  - Implemented `src/components/album_card.rs` with folder cover preview, item count badge, album relative path, and edit trigger (`✎`).
-- [x] **Step 7.2: Build `AlbumGrid` View & Detail View**
-  - Implemented `src/components/album_grid.rs`:
-    - Full album gallery with dynamic counts from SQLite.
-    - Album detail view: breadcrumb back bar (`← Albums`), album header, and media card grid.
-    - Wired to `AppRoute::Albums` in `src/app.rs`.
-- [x] **Step 7.3: Build Album Modals (`CreateAlbumModal`, `EditAlbumModal`)**
-  - Implemented `src/components/album_modal.rs`:
-    - `render_create_album_modal`: Quick presets (`Vacation`, `Family`, `Screenshots`, `Wallpapers`, etc.), physical disk directory creation, and SQLite insertion.
-    - `render_edit_album_modal`: Album deletion with safe fallback to `unknown` album.
+- [x] **Phase 1: Setup & Domain Models ✅** (`Cargo.toml`, domain models, linker setup)
+- [x] **Phase 2: SQLite Database Layer ✅** (Schema, count triggers, `albums` & `media_items` CRUD)
+- [x] **Phase 3: Removable Drive Detection ✅** (`sysinfo::Disks`, virtual fs filter, background monitor)
+- [x] **Phase 4: GPUI Frame & Component 1 (`Sidebar` & `DriveCard`) ✅** (Window frame, sidebar, drive selector)
+- [x] **Phase 5: Component 2 (`MediaCard` & `MediaGrid` Catalog View) ✅** (Card layout, filter bar, pagination)
+- [x] **Phase 6: Dynamic Theming Engine & Theme Switcher ✅** (5 themes, semantic tokens, quick toggle)
+- [x] **Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View) ✅** (Album grid, create/edit modals)
+- [x] **Phase 8: Component 4: Media Scanner & Relocator ✅** (Iterative crawler, relocator, `DiscoverView`)
+- [x] **Phase 9: Component 5: Media Player & Advanced Dialogs ✅** (`MediaPlayerModal`, `MoveToAlbumModal`, `MergeAlbumModal`, `DeleteAlbumModal`)
 
 ---
 
-### Phase 8: Component 4: Media Scanner & Relocator ✅
+### UI Page-by-Page Polish Roadmap (Current Focus)
 
-- [x] **Step 8.1: Directory Crawler & Ignore Engine**
-  - Implemented `src/scanner/walker.rs` with iterative directory walker, ignore rules, and media classification.
-- [x] **Step 8.2: Safe Relocator & Collision Resolver**
-  - Implemented `src/scanner/relocator.rs` with collision suffix resolution (`photo_1.jpg`), atomic file moves (`fs::rename` with copy-delete fallback), album detection, and SQLite insertions.
-- [x] **Step 8.3: Build `DiscoverView` Scanner UI**
-  - Implemented `src/components/discover_view.rs` with volume status, ignore list manager with quick presets (`+ temp`, `+ cache`, etc.), live scan metrics, and background asynchronous scan invocation via `cx.spawn`.
-  - Added thread-safe `Mutex<Connection>` to `LibraryDatabase` in `src/db/mod.rs`.
+> **Design Constraint: Strict Monochrome Iconography**
+>
+> - **Zero colored emojis** across all pages and modals.
+> - Use minimalist, monochrome symbols or Lucide-style line glyphs (`⌕` search, `⊞` folder, `▣` media, `▷` play, `⚙` settings, `×` close, `✓` check, `‹` / `›` chevrons, `↑` / `↓` arrows).
+> - All icons inherit theme text tokens (`theme.text_secondary`, `theme.text_muted`, `theme.accent`) without OS-native emoji color overrides.
+
+#### Stage 1: Dashboard View (`dash`) 🎯 (Next)
+
+- [ ] **Step UI-1.1**: Build dedicated `src/components/dashboard_view.rs` with clean monochrome iconography.
+- [ ] **Step UI-1.2**: Storage overview hero card:
+  - Mounted volume name, filesystem type, mount point path.
+  - Used vs free space with high-density progress bar and percentage badge.
+  - Monochrome volume status indicator (`● Active` / `○ Unmounted`).
+- [ ] **Step UI-1.3**: Quick Action cards:
+  - `Discover & Scan`: Direct navigation to scan folders.
+  - `New Album`: Opens `CreateAlbumModal`.
+  - `Browse Library`: Navigates to flat catalog.
+  - `Rescan Drive`: Quick library verification.
+- [ ] **Step UI-1.4**: Media Distribution & Metrics Breakdown:
+  - Total Photos vs Videos count & cumulative disk space footprint.
+  - Total Albums indexed with clean metric cards.
+- [ ] **Step UI-1.5**: "Recently Added Media" preview strip:
+  - Displays the last 6-8 cataloged items with hover previews.
+  - Clicking any preview item launches `MediaPlayerModal`.
+- [ ] **Step UI-1.6**: Disconnected / zero-drive empty state with guidance to connect removable storage.
+
+#### Stage 2: Discover & Scanner View (`discover`)
+
+- [ ] **Step UI-2.1**: Target drive summary banner with quick scan scope indicators.
+- [ ] **Step UI-2.2**: Ignore pattern management interface:
+  - Monochrome preset pills (`+ temp`, `+ cache`, `+ raw_dumps`, `+ thumbnails`, `+ backups`, `+ node_modules`).
+  - Custom pattern text entry with Add button.
+  - Removable active pattern chips (`×`) with hover highlight.
+- [ ] **Step UI-2.3**: Live scan monitoring panel:
+  - Active scanning state pill (Idle / Scanning / Paused / Completed).
+  - Progress bar and animation.
+  - Live metric counters: `Files Crawled`, `Media Cataloged`, `Ignored Files Skipped`.
+  - Current directory label truncation.
+- [ ] **Step UI-2.4**: Scanner control buttons (`▷ Start Scan`, `❚❚ Pause`, `■ Cancel`).
+
+#### Stage 3: Albums Gallery View (`album`)
+
+- [ ] **Step UI-3.1**: Gallery toolbar with album search input, total albums count badge, and `+ New Album` button.
+- [ ] **Step UI-3.2**: Refined `AlbumCard` with latest media item cover image, item count badge, folder path, and context menu (`Edit`).
+- [ ] **Step UI-3.3**: `CreateAlbumModal` integration with preset names and physical disk directory creation.
+- [ ] **Step UI-3.4**: Clean empty state when no albums exist.
+
+#### Stage 4: Album Inner / Detail View (`album-inner`)
+
+- [ ] **Step UI-4.1**: Compact breadcrumb bar (`← Albums / <Album Name>`) with item count and storage size.
+- [ ] **Step UI-4.2**: Album management trigger (`Edit`) opening edit/merge/delete modals.
+- [ ] **Step UI-4.3**: FilterBar scoped to the album (`All`, `Images`, `Videos`, sort criteria, sort direction).
+- [ ] **Step UI-4.4**: Album-scoped media grid with card click launching `MediaPlayerModal` with album neighbor navigation.
+- [ ] **Step UI-4.5**: Bulk selection toolbar (`Move to Album...`, `Delete Selected`, `Deselect all`).
+
+#### Stage 5: Media Player & Viewer (`media-player`)
+
+- [ ] **Step UI-5.1**: 38px compact Zed topbar with filename, monochrome type badge, action buttons (`Move`, `Delete`, `Info`, `Close`).
+- [ ] **Step UI-5.2**: Sequential neighbor navigation (`‹ Prev` / `› Next`) with keyboard arrow bindings.
+- [ ] **Step UI-5.3**: Image viewer canvas with zoom/fit toggles.
+- [ ] **Step UI-5.4**: Video player canvas with monochrome playback controls (play/pause, duration timeline, seeker bar, audio, fullscreen).
+- [ ] **Step UI-5.5**: Collapsible EXIF metadata side-drawer (`Info`) with complete file and hash properties.
+
+#### Stage 6: Media Library Catalog (`medias`)
+
+- [ ] **Step UI-6.1**: Global flat catalog with responsive multi-column card layout.
+- [ ] **Step UI-6.2**: Debounced text search filter, media type segmented tabs, and sort criteria.
+- [ ] **Step UI-6.3**: Zed pagination bar with total count and page jumping.
+- [ ] **Step UI-6.4**: Multi-select mode with bulk action triggers.
+
+#### Stage 7: Settings & Theming (`settings`)
+
+- [ ] **Step UI-7.1**: Visual theme picker cards with monochrome preview tokens for all 5 themes.
+- [ ] **Step UI-7.2**: Storage settings, thumbnail cache options, and system diagnostic info.
 
 ---
 
-### Phase 9: Component 5: Media Player & Advanced Dialogs ✅
-
-- [x] **Step 9.1: Build `MediaPlayerModal`**
-  - Implemented `src/components/media_player.rs` with compact Zed 38px titlebar, full-screen overlay, sequential neighbor navigation (`◀ Prev` / `▶ Next`), interactive video playback canvas with timeline seeker, and collapsible EXIF metadata drawer (`ℹ Info`).
-  - Integrated with `db.get_media_item_with_neighbors` for album-scoped or global slideshow navigation.
-- [x] **Step 9.2: Build `MoveToAlbumModal` & `MergeAlbumModal`**
-  - Implemented `src/components/move_modal.rs` (`render_move_to_album_modal`) for single/bulk media relocation with disk atomic moves (`resolve_collision`) and database record synchronization.
-  - Implemented `render_merge_album_modal` in `src/components/album_modal.rs` for merging all contents of one album directory into another.
-- [x] **Step 9.3: Build `DeleteAlbumModal`**
-  - Implemented `render_delete_album_modal` in `src/components/album_modal.rs` with explicit radio selection between Safe Preservation (reassigning files to `unknown` album without deleting from disk) and Permanent Deletion (removing physical files and database records).
-
----
-
-### Phase 10: End-to-End Polish & Verification (Next)
+### Phase 10: End-to-End Polish & Release Verification
 
 - [ ] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
 - [ ] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, snapshot recovery from `.backups/`).

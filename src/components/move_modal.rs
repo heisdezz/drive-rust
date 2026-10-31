@@ -59,7 +59,7 @@ pub fn render_move_to_album_modal(
                                 .text_sm()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child(format!("📁 Move to Album ({} selected)", item_count)),
+                                .child(format!("Move to Album ({} selected)", item_count)),
                         )
                         .child(
                             div()
@@ -74,7 +74,7 @@ pub fn render_move_to_album_modal(
                                         cx.notify();
                                     });
                                 })
-                                .child("✕"),
+                                .child("×"),
                         ),
                 )
                 .child(
@@ -158,7 +158,7 @@ pub fn render_move_to_album_modal(
                                                 .flex()
                                                 .items_center()
                                                 .gap(px(8.0))
-                                                .child(div().text_sm().child("📁"))
+                                                .child(div().text_xs().text_color(theme.text_muted).child("◫"))
                                                 .child(
                                                     div()
                                                         .text_xs()
