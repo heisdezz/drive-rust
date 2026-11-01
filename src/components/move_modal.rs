@@ -28,6 +28,8 @@ pub fn render_move_to_album_modal(
     };
 
     let item_count = moving_ids.len();
+    let albums_dir = state.get_albums_dir();
+    let albums_subfolder = state.get_albums_subfolder_name();
 
     div()
         .id(SharedString::from("move-to-album-modal-overlay"))
@@ -102,6 +104,8 @@ pub fn render_move_to_album_modal(
                             let db_clone = db_opt.clone();
                             let drive_clone = drive_opt.clone();
                             let ids = moving_ids.clone();
+                            let albums_dir = albums_dir.clone();
+                            let albums_subfolder = albums_subfolder.clone();
 
                             div()
                                 .id(SharedString::from(format!("move-target-{}", target_album_id)))
@@ -115,7 +119,7 @@ pub fn render_move_to_album_modal(
                                 .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
                                 .on_click(move |_, _, cx| {
                                     if let (Some(db), Some(drive)) = (&db_clone, &drive_clone) {
-                                        let target_dir = drive.mount_path.join("albums").join(&target_rel_path);
+                                        let target_dir = albums_dir.join(&target_rel_path);
                                         let _ = fs::create_dir_all(&target_dir);
 
                                         for mid in &ids {
@@ -127,7 +131,7 @@ pub fn render_move_to_album_modal(
                                                     .unwrap_or_default();
 
                                                 let (dest_path, final_filename) = resolve_collision(&target_dir, filename.to_str().unwrap_or("media"));
-                                                let new_rel = format!("albums/{}/{}", target_rel_path, final_filename);
+                                                let new_rel = format!("{}/{}/{}", albums_subfolder, target_rel_path, final_filename);
 
                                                 if current_file_path.exists() {
                                                     let _ = fs::rename(&current_file_path, &dest_path)

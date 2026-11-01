@@ -17,6 +17,8 @@ pub fn render_create_album_modal(
     let theme = state.theme;
     let drive_opt = state.selected_drive.clone();
     let db_opt = state.active_db.clone();
+    let albums_dir = state.get_albums_dir();
+    let albums_subfolder = state.get_albums_subfolder_name();
 
     let state_cancel = app_state.clone();
 
@@ -96,6 +98,8 @@ pub fn render_create_album_modal(
                                     let state_create = app_state.clone();
                                     let drive = drive_opt.clone();
                                     let db = db_opt.clone();
+                                    let albums_dir = albums_dir.clone();
+                                    let albums_subfolder = albums_subfolder.clone();
 
                                     div()
                                         .id(SharedString::from(format!("preset-{}", preset_name)))
@@ -108,13 +112,14 @@ pub fn render_create_album_modal(
                                         .border_color(theme.border_card)
                                         .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
                                         .on_click(move |_, _, cx| {
-                                            if let (Some(db), Some(drive)) = (&db, &drive) {
+                                            if let (Some(db), Some(_drive)) = (&db, &drive) {
                                                 // Create on disk
-                                                let album_dir = drive.mount_path.join("albums").join(preset_name);
+                                                let album_dir = albums_dir.join(preset_name);
                                                 let _ = fs::create_dir_all(&album_dir);
 
                                                 // Create in DB
-                                                let _ = db.create_album(preset_name, preset_name, None);
+                                                let rel_album = format!("{}/{}", albums_subfolder, preset_name);
+                                                let _ = db.create_album(preset_name, &rel_album, None);
                                             }
                                             state_create.update(cx, |s, cx| {
                                                 s.close_create_album_modal();
@@ -176,6 +181,7 @@ pub fn render_edit_album_modal(
     let editing_album = state.editing_album.clone();
 
     let state_cancel = app_state.clone();
+    let state_backdrop = app_state.clone();
 
     let album = match editing_album {
         Some(a) => a,
@@ -198,8 +204,16 @@ pub fn render_edit_album_modal(
         .flex()
         .items_center()
         .justify_center()
+        .on_click(move |_, _, cx| {
+            state_backdrop.update(cx, |s, cx| {
+                s.close_edit_album_modal();
+                cx.notify();
+            });
+        })
         .child(
             div()
+                .id(SharedString::from("edit-album-modal-card"))
+                .occlude()
                 .w(px(380.0))
                 .p(px(16.0))
                 .rounded(px(6.0))
@@ -384,6 +398,7 @@ pub fn render_merge_album_modal(
     let source_id = source.id;
     let source_name = source.name.clone();
     let source_rel = source.relative_path.clone();
+    let albums_dir = state.get_albums_dir();
 
     let albums = if let Some(ref db) = db_opt {
         db.get_albums()
@@ -470,6 +485,7 @@ pub fn render_merge_album_modal(
                             let db_clone = db_opt.clone();
                             let drive_clone = drive_opt.clone();
                             let src_rel = source_rel.clone();
+                            let albums_dir = albums_dir.clone();
 
                             div()
                                 .id(SharedString::from(format!("merge-dest-{}", target_id)))
@@ -483,8 +499,8 @@ pub fn render_merge_album_modal(
                                 .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
                                 .on_click(move |_, _, cx| {
                                     if let (Some(db), Some(drive)) = (&db_clone, &drive_clone) {
-                                        let src_dir = drive.mount_path.join("albums").join(&src_rel);
-                                        let dst_dir = drive.mount_path.join("albums").join(&target_rel);
+                                        let src_dir = if src_rel.contains('/') { drive.mount_path.join(&src_rel) } else { albums_dir.join(&src_rel) };
+                                        let dst_dir = if target_rel.contains('/') { drive.mount_path.join(&target_rel) } else { albums_dir.join(&target_rel) };
                                         let _ = fs::create_dir_all(&dst_dir);
 
                                         // Move physical files from source to dest
@@ -603,6 +619,7 @@ pub fn render_delete_album_modal(
     let state_radio_safe = app_state.clone();
     let state_radio_perm = app_state.clone();
     let state_confirm = app_state.clone();
+    let albums_dir = state.get_albums_dir();
 
     div()
         .id(SharedString::from("delete-album-modal-overlay"))
@@ -786,6 +803,7 @@ pub fn render_delete_album_modal(
                             let db = db_opt.clone();
                             let drive = drive_opt.clone();
                             let rel = album_rel.clone();
+                            let albums_dir = albums_dir.clone();
 
                             div()
                                 .id(SharedString::from("confirm-delete-album-btn"))
@@ -802,7 +820,7 @@ pub fn render_delete_album_modal(
                                     if let Some(db) = &db {
                                         if is_permanent {
                                             if let Some(drive) = &drive {
-                                                let album_dir = drive.mount_path.join("albums").join(&rel);
+                                                let album_dir = if rel.contains('/') { drive.mount_path.join(&rel) } else { albums_dir.join(&rel) };
                                                 let _ = fs::remove_dir_all(&album_dir);
                                             }
                                             let _ = db.delete_album(album_id, true);

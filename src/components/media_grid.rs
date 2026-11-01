@@ -2,7 +2,7 @@ use std::sync::Arc;
 use gpui_kit::*;
 use crate::components::filter_bar::render_filter_bar;
 use crate::components::media_card::render_media_card;
-use crate::state::app_state::AppState;
+use crate::state::app_state::{AppRoute, AppState};
 use crate::state::models::{MediaFilterType, MediaSortBy};
 use crate::theme::icons::Icon;
 
@@ -249,7 +249,7 @@ pub fn render_media_grid(
                                             };
                                             let it = item_clone.clone();
                                             state_click.update(cx, |s, cx| {
-                                                s.open_player(it, p_prev, p_next);
+                                                s.open_player_with_origin(it, p_prev, p_next, AppRoute::Medias);
                                                 cx.notify();
                                             });
                                         },

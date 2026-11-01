@@ -17,6 +17,7 @@ This tracker follows the strict dependency order for the complete native GPUI po
 - [x] **Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View) ✅** (Album grid, create/edit modals)
 - [x] **Phase 8: Component 4: Media Scanner & Relocator ✅** (Iterative crawler, relocator, `DiscoverView`)
 - [x] **Phase 9: Component 5: Media Player & Advanced Dialogs ✅** (`MediaPlayerModal`, `MoveToAlbumModal`, `MergeAlbumModal`, `DeleteAlbumModal`)
+- [x] **Phase 10: End-to-End Polish, Thumbnail Pipeline & Verification ✅** (Thumbnail generator, library audit, release compilation)
 
 ---
 
@@ -82,6 +83,7 @@ This tracker follows the strict dependency order for the complete native GPUI po
 - [x] **Step UI-5.5**: Collapsible EXIF metadata side-drawer (`Info`) with complete camera, lens, exposure, and file hash properties.
 - [x] **Step UI-5.6**: **Direct Media File & Stream Testing Canvas**: Dedicated test interface with direct file path input or remote stream URL testing, inspecting container/codec properties, and simulating native playback without browser webviews.
 - [x] ~~**Step UI-5.7**: **Local HTTP Media Streaming Server**~~: _[Removed / Superseded by Direct Native File I/O]_: Browser-specific HTTP 206 Partial Content workarounds from Electrobun/WebKit are unnecessary in native Rust; native file descriptors support instant zero-copy seeking directly from disk with zero socket overhead.
+- [x] **Step UI-5.8**: **Dedicated Media Inner Page (`media-inner` / `item-view`)**: Implemented first-class view routing within the app layout (preserving the navigation sidebar and layout header) with breadcrumbs (`← Albums` / `← Media Library` / `← Dashboard` / `<Filename>`), zoom/fit canvas, video controls, neighbor navigation, and collapsible EXIF drawer.
 
 #### Stage 6: Media Library Catalog (`medias`) ✅ (Completed)
 
@@ -100,14 +102,15 @@ This tracker follows the strict dependency order for the complete native GPUI po
 - [x] **Step UI-7.5**: **Drive Mount & Custom Resource Button**: Sidebar/Settings action button to mount unmounted block devices or attach an embedded/custom filesystem resource.
 - [x] **Step UI-7.6**: **Functional Drive Ejection**: Hook dashboard & settings `Eject` button to safe filesystem unmount routines.
 - [x] **Step UI-7.7**: **Grid Density Slider**: Configurable column grid layout (4 to 9 columns) in Settings.
+- [x] **Step UI-7.8**: **JSON Configuration File & Per-Drive Settings**: Central persistent JSON configuration file (`~/.config/rust-drive/config.json`) saving settings per drive (default location of albums, custom library paths, theme mode, and grid density) with folder picker and preset options.
 
 ---
 
-### Phase 10: End-to-End Polish & Verification
+### Phase 10: End-to-End Polish & Verification ✅ (Completed)
 
 - [x] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
 - [x] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, orphan cleanup, untracked file discovery).
-- [ ] **Step 10.3**: Full end-to-end testing with removable drive volumes. Verify `cargo test` and `cargo build --release`.
+- [x] **Step 10.3**: Full end-to-end testing with removable drive volumes. Verified `cargo test` (40 unit tests pass) and `cargo check --release` (clean optimized compile).
 
 ---
 

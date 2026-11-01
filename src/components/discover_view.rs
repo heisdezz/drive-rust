@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use gpui_kit::*;
 use crate::scanner::walker::crawl_directory;
-use crate::scanner::relocator::relocate_media;
+use crate::scanner::relocator::relocate_media_with_albums_dir;
 use crate::state::app_state::AppState;
 use crate::theme::icons::Icon;
 
@@ -664,6 +664,7 @@ pub fn render_discover_view(
                                             cx.notify();
                                         });
 
+                                        let albums_sub = state.read(cx).get_albums_subfolder_name();
                                         cx.spawn(move |cx: &mut AsyncApp| {
                                             let cx = cx.clone();
                                             let state = state.clone();
@@ -714,11 +715,12 @@ pub fn render_discover_view(
                                                     let mount = drive.mount_path.clone();
                                                     let db_ref = db.clone();
                                                     let item_clone = item.clone();
+                                                    let albums_sub_clone = albums_sub.clone();
 
                                                     let res = cx
                                                         .background_executor()
                                                         .spawn(async move {
-                                                            relocate_media(&mount, &db_ref, &item_clone)
+                                                            relocate_media_with_albums_dir(&mount, &albums_sub_clone, &db_ref, &item_clone)
                                                         })
                                                         .await;
 

@@ -1,4 +1,5 @@
-use crate::components::folder_picker::prompt_mount_custom_folder;
+use crate::components::folder_picker::{prompt_mount_custom_folder, prompt_select_albums_folder};
+use crate::config::AppConfig;
 use gpui_kit::*;
 use crate::state::app_state::AppState;
 use crate::theme::ThemeMode;
@@ -13,6 +14,9 @@ pub fn render_settings_view(
     let state = app_state.read(cx);
     let theme = state.theme;
     let custom_path = state.custom_library_path.clone();
+    let albums_dir = state.get_albums_dir();
+    let albums_subfolder = state.get_albums_subfolder_name();
+    let config_path = AppConfig::config_path();
     let grid_cols = state.grid_columns;
     let selected_drive = state.selected_drive.clone();
     let db_connected = state.active_db.is_some();
@@ -21,6 +25,8 @@ pub fn render_settings_view(
     let state_theme = app_state.clone();
     let state_grid = app_state.clone();
     let state_reset_loc = app_state.clone();
+    let state_reset_albums = app_state.clone();
+    let state_albums_prompt = app_state.clone();
     let state_eject = app_state.clone();
     let state_video_test = app_state.clone();
 
@@ -101,7 +107,7 @@ pub fn render_settings_view(
                         ),
                 ),
         )
-        // Section 1: Appearance & Visual Themes
+        // Section 1: Themes & Visual Personalization
         .child(
             div()
                 .p(px(14.0))
@@ -122,38 +128,38 @@ pub fn render_settings_view(
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child("APPEARANCE & THEME PRESETS"),
+                                .child("COLOR THEME & INTERFACE ACCENTS"),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .text_color(theme.text_muted)
-                                .child("Select from 5 calibrated dark & light workspace palettes"),
+                                .child(format!("Current: {}", state.theme_mode.name())),
                         ),
                 )
                 .child(
                     div()
                         .flex()
-                        .flex_wrap()
-                        .gap(px(10.0))
-                        .children(ThemeMode::all().into_iter().map(|mode| {
-                            let is_active = *mode == state.theme_mode;
-                            let state_pick = state_theme.clone();
-                            let mode_copy = mode;
+                        .gap(px(8.0))
+                        .children(ThemeMode::all().iter().copied().map(|mode| {
+                            let is_active = mode == state.theme_mode;
+                            let state_c = state_theme.clone();
+                            let mode_name = mode.name();
+                            let mode_icon = mode.icon();
 
                             div()
-                                .id(SharedString::from(format!("theme-card-{:?}", mode)))
+                                .id(SharedString::from(format!("theme-card-{}", mode_name)))
                                 .cursor_pointer()
-                                .w(px(130.0))
-                                .p(px(8.0))
-                                .rounded(px(5.0))
+                                .flex_1()
+                                .p(px(10.0))
+                                .rounded(px(4.0))
                                 .bg(if is_active { theme.bg_pill_active } else { theme.bg_sidebar })
                                 .border_1()
                                 .border_color(if is_active { theme.accent } else { theme.border_subtle })
                                 .hover(move |s| s.border_color(theme.accent))
                                 .on_click(move |_, _, cx| {
-                                    state_pick.update(cx, |s, cx| {
-                                        s.set_theme_mode(*mode_copy);
+                                    state_c.update(cx, |s, cx| {
+                                        s.set_theme_mode(mode);
                                         cx.notify();
                                     });
                                 })
@@ -165,15 +171,15 @@ pub fn render_settings_view(
                                         .child(
                                             div()
                                                 .text_xs()
-                                                .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::MEDIUM })
+                                                .font_weight(if is_active { FontWeight::BOLD } else { FontWeight::NORMAL })
                                                 .text_color(if is_active { theme.accent } else { theme.text_primary })
-                                                .child(mode.name()),
+                                                .child(mode_name),
                                         )
                                         .child(
                                             div()
                                                 .text_xs()
-                                                .text_color(if is_active { theme.accent } else { theme.text_muted })
-                                                .child(if is_active { "●" } else { "○" }),
+                                                .text_color(theme.text_muted)
+                                                .child(mode_icon),
                                         ),
                                 )
                                 .child(
@@ -186,7 +192,7 @@ pub fn render_settings_view(
                         })),
                 ),
         )
-        // Section 2: Library Storage & Custom Folder Location
+        // Section 2: Library Storage, Per-Drive Album Location & JSON Config
         .child(
             div()
                 .p(px(14.0))
@@ -196,7 +202,7 @@ pub fn render_settings_view(
                 .border_color(theme.border_card)
                 .flex()
                 .flex_col()
-                .gap(px(10.0))
+                .gap(px(12.0))
                 .child(
                     div()
                         .flex()
@@ -207,15 +213,219 @@ pub fn render_settings_view(
                                 .text_xs()
                                 .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
-                                .child("LIBRARY STORAGE LOCATION"),
+                                .child("LIBRARY STORAGE & VOLUME CONFIGURATION"),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .text_color(theme.text_muted)
-                                .child("Configure where SQLite catalog database and albums are saved"),
+                                .child("Persistent settings stored per drive volume in JSON config"),
                         ),
                 )
+                // Sub-card 1: JSON Config File Path
+                .child(
+                    div()
+                        .p(px(10.0))
+                        .rounded(px(4.0))
+                        .bg(theme.bg_sidebar)
+                        .border_1()
+                        .border_color(theme.border_subtle)
+                        .flex()
+                        .items_center()
+                        .justify_between()
+                        .child(
+                            div()
+                                .flex()
+                                .flex_col()
+                                .gap(px(2.0))
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_muted)
+                                        .child("CONFIGURATION FILE (JSON):"),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::SEMIBOLD)
+                                        .text_color(theme.text_primary)
+                                        .child(config_path.display().to_string()),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .px(px(6.0))
+                                .py(px(2.0))
+                                .rounded(px(3.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_subtle)
+                                .text_xs()
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.accent)
+                                .child("XDG JSON Persisted"),
+                        ),
+                )
+                // Sub-card 2: Per-Drive Default Albums Folder Location
+                .child(
+                    div()
+                        .p(px(10.0))
+                        .rounded(px(4.0))
+                        .bg(theme.bg_sidebar)
+                        .border_1()
+                        .border_color(theme.border_subtle)
+                        .flex()
+                        .flex_col()
+                        .gap(px(8.0))
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(6.0))
+                                        .child(
+                                            div()
+                                                .text_xs()
+                                                .font_weight(FontWeight::BOLD)
+                                                .text_color(theme.text_primary)
+                                                .child("DEFAULT ALBUMS FOLDER LOCATION (PER-DRIVE)"),
+                                        )
+                                        .child(
+                                            if let Some(ref d) = selected_drive {
+                                                div()
+                                                    .px(px(6.0))
+                                                    .py(px(1.0))
+                                                    .rounded(px(3.0))
+                                                    .bg(theme.bg_pill)
+                                                    .text_xs()
+                                                    .text_color(theme.accent)
+                                                    .child(format!("● {}", d.name))
+                                                    .into_any_element()
+                                            } else {
+                                                div().into_any_element()
+                                            }
+                                        ),
+                                )
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .text_color(theme.text_muted)
+                                        .child(format!("Setting: \"{}\"", albums_subfolder)),
+                                ),
+                        )
+                        .child(
+                            div()
+                                .text_xs()
+                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_color(theme.text_secondary)
+                                .child(format!("Resolved Disk Path: {}", albums_dir.display())),
+                        )
+                        // Preset Pills & Action Buttons for Albums Directory
+                        .child(
+                            div()
+                                .flex()
+                                .items_center()
+                                .justify_between()
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(6.0))
+                                        .children(vec!["albums", "Photos", "Pictures/Albums", "DCIM/Albums"].into_iter().map(|preset| {
+                                            let is_curr = albums_subfolder == preset;
+                                            let st_pick = app_state.clone();
+                                            let p_str = preset.to_string();
+                                            div()
+                                                .id(SharedString::from(format!("album-dir-preset-{}", preset)))
+                                                .cursor_pointer()
+                                                .px(px(8.0))
+                                                .py(px(3.0))
+                                                .rounded(px(3.0))
+                                                .bg(if is_curr { theme.bg_pill_active } else { theme.bg_card })
+                                                .border_1()
+                                                .border_color(if is_curr { theme.accent } else { theme.border_card })
+                                                .hover(move |s| s.border_color(theme.accent))
+                                                .on_click(move |_, _, cx| {
+                                                    st_pick.update(cx, |s, cx| {
+                                                        s.set_selected_drive_albums_dir(&p_str);
+                                                        cx.notify();
+                                                    });
+                                                })
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .font_weight(if is_curr { FontWeight::BOLD } else { FontWeight::NORMAL })
+                                                        .text_color(if is_curr { theme.accent } else { theme.text_muted })
+                                                        .child(preset),
+                                                )
+                                        })),
+                                )
+                                .child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(6.0))
+                                        .child(
+                                            div()
+                                                .id(SharedString::from("browse-albums-folder-btn"))
+                                                .cursor_pointer()
+                                                .px(px(8.0))
+                                                .py(px(4.0))
+                                                .rounded(px(4.0))
+                                                .bg(theme.bg_pill)
+                                                .border_1()
+                                                .border_color(theme.border_card)
+                                                .hover(move |s| s.bg(theme.bg_pill_active).border_color(theme.accent))
+                                                .on_click(move |_, _, cx| {
+                                                    prompt_select_albums_folder(&state_albums_prompt, cx);
+                                                })
+                                                .child(
+                                                    div()
+                                                        .text_xs()
+                                                        .font_weight(FontWeight::MEDIUM)
+                                                        .text_color(theme.text_primary)
+                                                        .child(format!("{} Browse...", Icon::FOLDER)),
+                                                ),
+                                        )
+                                        .child(
+                                            if albums_subfolder != "albums" {
+                                                div()
+                                                    .id(SharedString::from("reset-albums-location-btn"))
+                                                    .cursor_pointer()
+                                                    .px(px(8.0))
+                                                    .py(px(4.0))
+                                                    .rounded(px(4.0))
+                                                    .bg(theme.bg_pill)
+                                                    .border_1()
+                                                    .border_color(theme.border_card)
+                                                    .hover(move |s| s.bg(theme.bg_card_hover).border_color(theme.accent))
+                                                    .on_click(move |_, _, cx| {
+                                                        state_reset_albums.update(cx, |s, cx| {
+                                                            s.set_selected_drive_albums_dir("albums");
+                                                            cx.notify();
+                                                        });
+                                                    })
+                                                    .child(
+                                                        div()
+                                                            .text_xs()
+                                                            .font_weight(FontWeight::MEDIUM)
+                                                            .text_color(theme.text_secondary)
+                                                            .child("Reset to \"albums\""),
+                                                    )
+                                                    .into_any_element()
+                                            } else {
+                                                div().into_any_element()
+                                            }
+                                        ),
+                                ),
+                        ),
+                )
+                // Sub-card 3: Active SQLite Database Path
                 .child(
                     div()
                         .p(px(10.0))
@@ -260,7 +470,6 @@ pub fn render_settings_view(
                                 .items_center()
                                 .gap(px(6.0))
                                 .child(
-                                    // Native folder picker button via folder_picker helper
                                     {
                                         let app_state_prompt = app_state.clone();
                                         div()

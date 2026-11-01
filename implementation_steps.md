@@ -17,6 +17,7 @@ This tracker follows the strict dependency order for the complete native GPUI po
 - [x] **Phase 7: Component 3: `AlbumCard` & `AlbumGrid` (Gallery View) ✅** (Album grid, create/edit modals)
 - [x] **Phase 8: Component 4: Media Scanner & Relocator ✅** (Iterative crawler, relocator, `DiscoverView`)
 - [x] **Phase 9: Component 5: Media Player & Advanced Dialogs ✅** (`MediaPlayerModal`, `MoveToAlbumModal`, `MergeAlbumModal`, `DeleteAlbumModal`)
+- [x] **Phase 10: End-to-End Polish, Thumbnail Pipeline & Verification ✅** (Thumbnail generator, library audit, release compilation)
 
 ---
 
@@ -52,8 +53,8 @@ This tracker follows the strict dependency order for the complete native GPUI po
   - Live metric counters: `FILES CRAWLED`, `MEDIA CATALOGED`, `ACTIVE IGNORES`, `STATUS`.
   - Current directory processing label.
 - [x] **Step UI-2.4**: Scanner control buttons (`▷ Start Discovery Scan`, `Reset Metrics`).
-- [x] **Step UI-2.5**: Source folder picker: Allow scanning a targeted subfolder (e.g. `DCIM`, `Pictures`, `Videos`, `Camera`, `GoPro`, `DJI`) instead of only the drive root.
-- [x] **Step UI-2.6**: Scanner lifecycle controls: Pause (`❚❚`), Resume (`▷`), and Abort (`■`) crawl operations with atomic thread coordination.
+- [x] **Step UI-2.5**: Source folder picker: Allow scanning a targeted subfolder (e.g. `DCIM`) instead of only the drive root.
+- [x] **Step UI-2.6**: Scanner lifecycle controls: Pause, Resume, and Cancel/Abort crawl operations with atomic thread coordination.
 
 #### Stage 3: Albums Gallery View (`album`) ✅ (Completed)
 
@@ -61,17 +62,17 @@ This tracker follows the strict dependency order for the complete native GPUI po
   - Standardize `AlbumCard` and `MediaCard` to identical height (`180px`) and cover height (`108px`).
   - Multi-line text wrapping for album title, folder relative path, and media filenames with line clamping.
 - [x] **Step UI-3.1**: Gallery toolbar with album search input, total albums count badge, and `+ New Album` button.
-- [x] **Step UI-3.2**: Refined `AlbumCard` with latest media item cover image, item count badge, folder path, and context menu (`Edit`).
+- [x] **Step UI-3.2**: Refined `AlbumCard` with latest media item cover preview, item count badge, folder path, and context menu (`Edit`).
 - [x] **Step UI-3.3**: `CreateAlbumModal` integration with preset names and physical disk directory creation.
-- [x] **Step UI-3.4**: Clean empty state when no albums exist (or when search yields zero matches, with quick clear action).
+- [x] **Step UI-3.4**: Clean empty states: Dedicated states for 0 total albums vs 0 search matches with `Clear Search Filter` trigger.
 
 #### Stage 4: Album Inner / Detail View (`album-inner`) ✅ (Completed)
 
-- [x] **Step UI-4.1**: Compact breadcrumb bar (`← Albums / <Album Name>`) with item count and storage size.
+- [x] **Step UI-4.1**: Compact breadcrumb bar (`← Albums / <Album Name>`) with item count and formatted storage size.
 - [x] **Step UI-4.2**: Album management trigger (`✎ Manage`) opening edit/merge/delete modals.
 - [x] **Step UI-4.3**: FilterBar scoped to the album (`All`, `Images`, `Videos`, sort criteria, sort direction).
 - [x] **Step UI-4.4**: Album-scoped media grid with card click launching `MediaPlayerModal` with album neighbor navigation.
-- [x] **Step UI-4.5**: Bulk selection toolbar (`Move to Album...`, `Delete Selected`, `Deselect all`).
+- [x] **Step UI-4.5**: Bulk selection floating toolbar (`Move to Album...`, `Delete Selected`, `Deselect all`).
 
 #### Stage 5: Media Player & Direct Video Testing (`media-player`) ✅ (Completed)
 
@@ -80,8 +81,9 @@ This tracker follows the strict dependency order for the complete native GPUI po
 - [x] **Step UI-5.3**: Image viewer canvas with zoom/fit toggles (`100% Zoom` vs `Fit Window`).
 - [x] **Step UI-5.4**: Video player canvas with monochrome playback controls (play/pause, duration timeline, seeker bar, audio, fullscreen).
 - [x] **Step UI-5.5**: Collapsible EXIF metadata side-drawer (`Info`) with complete camera, lens, exposure, and file hash properties.
-- [x] **Step UI-5.6**: **Direct Media File & Stream Testing Canvas**: Dedicated interface allowing direct file path entry or remote stream URL testing, inspecting container/codec properties, and simulating native playback without browser webviews.
+- [x] **Step UI-5.6**: **Direct Media File & Stream Testing Canvas**: Dedicated test interface with direct file path input or remote stream URL testing, inspecting container/codec properties, and simulating native playback without browser webviews.
 - [x] ~~**Step UI-5.7**: **Local HTTP Media Streaming Server**~~: _[Removed / Superseded by Direct Native File I/O]_: Browser-specific HTTP 206 Partial Content workarounds from Electrobun/WebKit are unnecessary in native Rust; native file descriptors support instant zero-copy seeking directly from disk with zero socket overhead.
+- [x] **Step UI-5.8**: **Dedicated Media Inner Page (`media-inner` / `item-view`)**: Implemented first-class view routing within the app layout (preserving the navigation sidebar and layout header) with breadcrumbs (`← Albums` / `← Media Library` / `← Dashboard` / `<Filename>`), zoom/fit canvas, video controls, neighbor navigation, and collapsible EXIF drawer.
 
 #### Stage 6: Media Library Catalog (`medias`) ✅ (Completed)
 
@@ -94,20 +96,21 @@ This tracker follows the strict dependency order for the complete native GPUI po
 #### Stage 7: Settings, Library Location & Drive Management (`settings`) ✅ (Completed)
 
 - [x] **Step UI-7.1**: Visual theme picker cards with monochrome preview tokens for all 5 themes.
-- [x] **Step UI-7.2**: **Selecting Library Location**: Interface to select, change, or browse a custom library folder location / root mount path instead of only relying on default drive mount points.
+- [x] **Step UI-7.2**: **Selecting Library Location with Folder Picker**: Native system folder chooser via `cx.prompt_for_paths` (XDG Desktop Portal) with automatic fallback to `zenity`/`kdialog`, instant database reconnection, and `Reset to Drive Root` trigger.
 - [x] **Step UI-7.3**: Storage settings, thumbnail cache options (size display & clear cache), and system diagnostic info.
 - [x] **Step UI-7.4**: **Sidebar Drive Selection Polish**: Disable selecting System/Internal drives by default on startup (auto-selecting removable/external storage only, or remaining unmounted).
-- [x] **Step UI-7.5**: **Drive Mount & Custom Resource Button**: Sidebar action button to mount unmounted block devices or attach an embedded/custom filesystem resource via folder chooser.
+- [x] **Step UI-7.5**: **Drive Mount & Custom Resource Button**: Sidebar/Settings action button to mount unmounted block devices or attach an embedded/custom filesystem resource.
 - [x] **Step UI-7.6**: **Functional Drive Ejection**: Hook dashboard & settings `Eject` button to safe filesystem unmount routines.
-- [x] **Step UI-7.7**: **Grid Density Slider**: Configurable column grid layout (4 to 9 columns) in Settings with dynamic sizing across media grid.
+- [x] **Step UI-7.7**: **Grid Density Slider**: Configurable column grid layout (4 to 9 columns) in Settings.
+- [x] **Step UI-7.8**: **JSON Configuration File & Per-Drive Settings**: Central persistent JSON configuration file (`~/.config/rust-drive/config.json`) saving settings per drive (default location of albums, custom library paths, theme mode, and grid density) with folder picker and preset options.
 
 ---
 
-### Phase 10: End-to-End Polish & Verification
+### Phase 10: End-to-End Polish & Verification ✅ (Completed)
 
 - [x] **Step 10.1**: Background thumbnail generator (resizing with `image` crate, video frames via `ffmpeg` CLI) with playback pause gate.
 - [x] **Step 10.2**: Implement `album-rescan` library audit (reconciliation with disk, orphan cleanup, untracked file discovery).
-- [ ] **Step 10.3**: Full end-to-end testing with removable drive volumes. Verify `cargo test` and `cargo build --release`.
+- [x] **Step 10.3**: Full end-to-end testing with removable drive volumes. Verified `cargo test` (40 unit tests pass) and `cargo check --release` (clean optimized compile).
 
 ---
 

@@ -5,8 +5,18 @@ use crate::drives::detector::format_bytes;
 use crate::state::app_state::AppState;
 use crate::components::media_card::format_duration;
 
-/// Renders the full-screen / large window Media Player modal with preview, neighbor navigation, and EXIF drawer.
+/// Backwards-compatible alias for render_media_inner_view
 pub fn render_media_player_modal(
+    app_state: &Entity<AppState>,
+    window: &mut Window,
+    cx: &mut App,
+) -> impl IntoElement {
+    render_media_inner_view(app_state, window, cx)
+}
+
+/// Renders the dedicated Media Inner Page view (Stage 5 item-view) with breadcrumbs,
+/// zoom/fit canvas, video controls, neighbor navigation, and collapsible EXIF metadata drawer.
+pub fn render_media_inner_view(
     app_state: &Entity<AppState>,
     _window: &mut Window,
     cx: &mut App,
@@ -52,13 +62,38 @@ pub fn render_media_player_modal(
     let db_for_del = db_opt.clone();
     let selected_album_id = state.selected_album_id;
 
+    let back_label = match state.media_origin_route {
+        Some(crate::state::app_state::AppRoute::Albums) => {
+            if let Some(alb_id) = selected_album_id {
+                if let Some(ref db) = db_opt {
+                    db.get_album_by_id(alb_id)
+                        .ok()
+                        .flatten()
+                        .map(|a| a.name)
+                        .unwrap_or_else(|| "Albums".to_string())
+                } else {
+                    "Albums".to_string()
+                }
+            } else {
+                "Albums".to_string()
+            }
+        }
+        Some(crate::state::app_state::AppRoute::Medias) => "Media Library".to_string(),
+        Some(crate::state::app_state::AppRoute::Dashboard) => "Dashboard".to_string(),
+        _ => "Back".to_string(),
+    };
+
     div()
-        .id(SharedString::from("media-player-overlay"))
-        .absolute()
-        .inset_0()
-        .bg(rgba(0x000000dd))
+        .id(SharedString::from("media-inner-view-container"))
+        .w_full()
+        .h_full()
         .flex()
         .flex_col()
+        .bg(theme.bg_card)
+        .rounded(px(6.0))
+        .border_1()
+        .border_color(theme.border_card)
+        .overflow_hidden()
         // Top Header Bar (Zed 38px compact)
         .child(
             div()
@@ -70,50 +105,74 @@ pub fn render_media_player_modal(
                 .flex()
                 .items_center()
                 .justify_between()
-                // Left: Close button and Title
+                // Left: Breadcrumb Navigation and File Metadata
                 .child(
                     div()
                         .flex()
                         .items_center()
-                        .gap(px(10.0))
+                        .gap(px(8.0))
                         .child(
                             div()
-                                .id(SharedString::from("player-close-btn"))
+                                .id(SharedString::from("player-back-btn"))
                                 .cursor_pointer()
                                 .px(px(8.0))
-                                .py(px(4.0))
+                                .py(px(3.5))
                                 .rounded(px(4.0))
                                 .bg(theme.bg_pill)
                                 .border_1()
                                 .border_color(theme.border_card)
-                                .text_xs()
-                                .font_weight(FontWeight::BOLD)
-                                .text_color(theme.text_secondary)
-                                .hover(move |s| s.bg(theme.bg_card_hover).text_color(theme.text_primary))
+                                .hover(move |s| s.bg(theme.bg_pill_active).text_color(theme.text_primary))
                                 .on_click(move |_, _, cx| {
                                     state_close.update(cx, |s, cx| {
                                         s.close_player();
                                         cx.notify();
                                     });
                                 })
-                                .child(format!("{} Close", Icon::CLOSE)),
+                                .child(
+                                    div()
+                                        .text_xs()
+                                        .font_weight(FontWeight::MEDIUM)
+                                        .text_color(theme.text_secondary)
+                                        .child(format!("{} {}", Icon::ARROW_LEFT, back_label)),
+                                ),
                         )
                         .child(
                             div()
                                 .text_xs()
-                                .font_weight(FontWeight::SEMIBOLD)
+                                .text_color(theme.text_muted)
+                                .child("/"),
+                        )
+                        .child(
+                            div()
+                                .text_xs()
+                                .font_weight(FontWeight::BOLD)
                                 .text_color(theme.text_primary)
                                 .child(filename.clone()),
                         )
                         .child(
                             div()
-                                .px(px(5.0))
-                                .py(px(1.0))
+                                .px(px(6.0))
+                                .py(px(1.5))
                                 .rounded(px(3.0))
                                 .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_subtle)
+                                .text_xs()
+                                .font_weight(FontWeight::MEDIUM)
+                                .text_color(theme.accent)
+                                .child(if is_video { format!("{} VIDEO", Icon::VIDEO) } else { format!("{} IMAGE", Icon::IMAGE) }),
+                        )
+                        .child(
+                            div()
+                                .px(px(6.0))
+                                .py(px(1.5))
+                                .rounded(px(3.0))
+                                .bg(theme.bg_pill)
+                                .border_1()
+                                .border_color(theme.border_subtle)
                                 .text_xs()
                                 .text_color(theme.text_muted)
-                                .child(if is_video { "VIDEO" } else { "IMAGE" }),
+                                .child(size_str.clone()),
                         ),
                 )
                 // Right: Action buttons (Move, Delete, Toggle Metadata)

@@ -243,6 +243,7 @@ fn render_mounted_dashboard(
     _cx: &mut App,
 ) -> impl IntoElement {
     let used_pct = drive.used_percentage;
+    let albums_dir = app_state.read(_cx).get_albums_dir();
 
     // Query stats and newest media
     let (recent_media, total_media_items) = if let Some(db) = db_opt {
@@ -335,8 +336,8 @@ fn render_mounted_dashboard(
                                         .text_xs()
                                         .text_color(theme.text_secondary)
                                         .child(format!(
-                                            "Album folder: {}/albums",
-                                            drive.mount_path.display()
+                                            "Album folder: {}",
+                                            albums_dir.display()
                                         )),
                                 ),
                         ),
@@ -630,7 +631,7 @@ fn render_mounted_dashboard(
                                     .on_click(move |_, _, cx| {
                                         let it = item_clone.clone();
                                         state_click.update(cx, |s, cx| {
-                                            s.open_player(it, None, None);
+                                            s.open_player_with_origin(it, None, None, AppRoute::Dashboard);
                                             cx.notify();
                                         });
                                     })

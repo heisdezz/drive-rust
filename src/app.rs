@@ -9,7 +9,7 @@ use crate::components::album_modal::{
     render_merge_album_modal,
 };
 use crate::components::discover_view::render_discover_view;
-use crate::components::media_player::render_media_player_modal;
+use crate::components::media_player::render_media_inner_view;
 use crate::components::move_modal::render_move_to_album_modal;
 use crate::components::settings_view::render_settings_view;
 use crate::components::video_test_modal::render_video_test_modal;
@@ -31,37 +31,60 @@ impl AppView {
 
 impl Render for AppView {
     fn render(&mut self, window: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
-        let state = self.app_state.read(cx);
-        let active_route = state.active_route;
-        let selected_drive = state.selected_drive.clone();
-        let db_connected = state.active_db.is_some();
-        let theme = state.theme;
-        let show_create_album = state.show_create_album_modal;
-        let show_edit_album = state.editing_album.is_some();
-        let show_merge_album = state.merging_album.is_some();
-        let show_delete_album = state.deleting_album.is_some();
-        let show_move_modal = !state.moving_media_ids.is_empty();
-        let show_media_player = state.viewing_media_item.is_some();
-        let show_video_test = state.show_video_test_modal;
+        let (
+            active_route,
+            selected_drive,
+            db_connected,
+            theme,
+            is_viewing_media_item,
+            show_create_album,
+            show_edit_album,
+            show_merge_album,
+            show_delete_album,
+            show_move_modal,
+            show_video_test,
+        ) = {
+            let state = self.app_state.read(cx);
+            (
+                state.active_route,
+                state.selected_drive.clone(),
+                state.active_db.is_some(),
+                state.theme,
+                state.viewing_media_item.is_some(),
+                state.show_create_album_modal,
+                state.editing_album.is_some(),
+                state.merging_album.is_some(),
+                state.deleting_album.is_some(),
+                !state.moving_media_ids.is_empty(),
+                state.show_video_test_modal,
+            )
+        };
 
         let state_theme = self.app_state.clone();
 
         div()
-            .flex()
+            .relative()
             .w_full()
             .h_full()
             .bg(theme.bg_canvas)
             .text_color(theme.text_primary)
-            // Left: Navigation & Drives Sidebar
-            .child(render_sidebar(&self.app_state, window, cx))
-            // Right: Main App Canvas
+            // Main Content Layout: Horizontal flex containing Sidebar + Main Canvas
             .child(
                 div()
                     .flex()
-                    .flex_col()
-                    .flex_grow(1.0)
+                    .w_full()
                     .h_full()
                     .overflow_hidden()
+                    // Left: Navigation & Drives Sidebar
+                    .child(render_sidebar(&self.app_state, window, cx))
+                    // Right: Main App Canvas
+                    .child(
+                        div()
+                            .flex()
+                            .flex_col()
+                            .flex_grow(1.0)
+                            .h_full()
+                            .overflow_hidden()
                     // Top App Header & Breadcrumbs (Zed 38px titlebar height)
                     .child(
                         div()
@@ -102,7 +125,11 @@ impl Render for AppView {
                                             .text_xs()
                                             .font_weight(FontWeight::SEMIBOLD)
                                             .text_color(theme.text_primary)
-                                            .child(active_route.title()),
+                                            .child(if is_viewing_media_item {
+                                                "Media Viewer".to_string()
+                                            } else {
+                                                active_route.title().to_string()
+                                            }),
                                     ),
                             )
                             // Right: Theme Mode Quick Toggle & Status Indicators
@@ -217,57 +244,39 @@ impl Render for AppView {
                             .overflow_y_hidden()
                             .child(render_route_content(&self.app_state, active_route, selected_drive.as_ref(), window, cx)),
                     ),
+                    )
             )
-            // Modals & Viewer Overlay Layer
-            .child(
-                if show_create_album {
-                    div().child(render_create_album_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_edit_album {
-                    div().child(render_edit_album_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_merge_album {
-                    div().child(render_merge_album_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_delete_album {
-                    div().child(render_delete_album_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_move_modal {
-                    div().child(render_move_to_album_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_media_player {
-                    div().child(render_media_player_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
-            .child(
-                if show_video_test {
-                    div().child(render_video_test_modal(&self.app_state, window, cx))
-                } else {
-                    div()
-                },
-            )
+            // Full-Window Modals & Viewer Overlay Layer (Direct absolute centered children)
+            .children(if show_create_album {
+                Some(render_create_album_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
+            .children(if show_edit_album {
+                Some(render_edit_album_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
+            .children(if show_merge_album {
+                Some(render_merge_album_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
+            .children(if show_delete_album {
+                Some(render_delete_album_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
+            .children(if show_move_modal {
+                Some(render_move_to_album_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
+            .children(if show_video_test {
+                Some(render_video_test_modal(&self.app_state, window, cx).into_any_element())
+            } else {
+                None
+            })
     }
 }
 
@@ -278,16 +287,20 @@ fn render_route_content(
     selected_drive: Option<&crate::state::models::DriveInfo>,
     window: &mut Window,
     cx: &mut App,
-) -> impl IntoElement {
+) -> AnyElement {
     let state = app_state.read(cx);
     let theme = state.theme;
 
+    if state.viewing_media_item.is_some() {
+        return div().w_full().h_full().child(render_media_inner_view(app_state, window, cx)).into_any_element();
+    }
+
     match route {
-        AppRoute::Dashboard => div().w_full().h_full().child(render_dashboard_view(app_state, window, cx)),
-        AppRoute::Discover => div().w_full().h_full().child(render_discover_view(app_state, window, cx)),
-        AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)),
-        AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)),
-        AppRoute::Settings => div().w_full().h_full().child(render_settings_view(app_state, window, cx)),
+        AppRoute::Dashboard => div().w_full().h_full().child(render_dashboard_view(app_state, window, cx)).into_any_element(),
+        AppRoute::Discover => div().w_full().h_full().child(render_discover_view(app_state, window, cx)).into_any_element(),
+        AppRoute::Medias => div().w_full().h_full().child(render_media_grid(app_state, window, cx)).into_any_element(),
+        AppRoute::Albums => div().w_full().h_full().child(render_album_grid(app_state, window, cx)).into_any_element(),
+        AppRoute::Settings => div().w_full().h_full().child(render_settings_view(app_state, window, cx)).into_any_element(),
         _ => div()
             .flex()
             .flex_col()
@@ -370,6 +383,6 @@ fn render_route_content(
                                     .child("Embedded SQLite via rusqlite (WAL mode)"),
                             ),
                     ),
-            ),
+            ).into_any_element(),
     }
 }

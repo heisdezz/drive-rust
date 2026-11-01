@@ -116,7 +116,7 @@ pub fn render_drive_card(
                             .text_xs()
                             .font_weight(FontWeight::MEDIUM)
                             .text_color(theme.text_muted)
-                            .child("SYSTEM (Disabled)")
+                            .child("SYSTEM")
                     } else if drive.is_mounted {
                         div()
                             .px(px(6.0))

@@ -303,14 +303,14 @@ pub fn render_sidebar(
                             div()
                                 .text_xs()
                                 .text_color(theme.accent)
-                                .child(Icon::FOLDER),
+                                .child(Icon::PLUS),
                         )
                         .child(
                             div()
                                 .text_xs()
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(theme.accent)
-                                .child("Mount Folder as Drive"),
+                                .child("Mount Drive"),
                         ),
                 ),
         )

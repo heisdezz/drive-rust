@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::db::{LibraryDatabase, NewMediaItem};
 use crate::scanner::walker::DiscoveredMedia;
 
-/// Result of relocating a single media item.
+/// Outcome of relocating a media file into an album.
 #[derive(Debug, Clone)]
 pub struct RelocationOutcome {
     pub media_id: i64,
@@ -12,29 +12,32 @@ pub struct RelocationOutcome {
     pub album_id: i64,
 }
 
-/// Generates a non-colliding filename if `target_path` already exists on disk.
-pub fn resolve_collision(target_dir: &Path, original_filename: &str) -> (PathBuf, String) {
-    let mut candidate_name = original_filename.to_string();
-    let mut candidate_path = target_dir.join(&candidate_name);
-
-    if !candidate_path.exists() {
-        return (candidate_path, candidate_name);
+/// Computes collision-free destination file path.
+/// If `file.jpg` already exists, returns `file_1.jpg`, `file_2.jpg`, etc.
+pub fn resolve_collision(target_dir: &Path, filename: &str) -> (PathBuf, String) {
+    let mut candidate = target_dir.join(filename);
+    if !candidate.exists() {
+        return (candidate, filename.to_string());
     }
 
-    // Split name and extension
-    let (stem, ext) = match original_filename.rfind('.') {
-        Some(idx) => (&original_filename[..idx], &original_filename[idx..]),
-        None => (original_filename, ""),
-    };
+    let p = Path::new(filename);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or(filename);
+    let ext = p.extension().and_then(|e| e.to_str()).unwrap_or("");
 
     let mut counter = 1;
-    while candidate_path.exists() {
-        candidate_name = format!("{}_{}{}", stem, counter, ext);
-        candidate_path = target_dir.join(&candidate_name);
+    loop {
+        let new_filename = if ext.is_empty() {
+            format!("{}_{}", stem, counter)
+        } else {
+            format!("{}_{}.{}", stem, counter, ext)
+        };
+
+        candidate = target_dir.join(&new_filename);
+        if !candidate.exists() {
+            return (candidate, new_filename);
+        }
         counter += 1;
     }
-
-    (candidate_path, candidate_name)
 }
 
 /// Relocates a discovered media file into `albums/<album_name>/` and writes to SQLite.
@@ -43,7 +46,26 @@ pub fn relocate_media(
     db: &LibraryDatabase,
     item: &DiscoveredMedia,
 ) -> Result<RelocationOutcome, String> {
-    let albums_dir = mount_path.join("albums");
+    relocate_media_with_albums_dir(mount_path, "albums", db, item)
+}
+
+/// Relocates a discovered media file into a configurable albums directory and writes to SQLite.
+pub fn relocate_media_with_albums_dir(
+    mount_path: &Path,
+    albums_subfolder: &str,
+    db: &LibraryDatabase,
+    item: &DiscoveredMedia,
+) -> Result<RelocationOutcome, String> {
+    let subfolder = if albums_subfolder.trim().is_empty() {
+        "albums"
+    } else {
+        albums_subfolder.trim()
+    };
+    let albums_dir = if Path::new(subfolder).is_absolute() {
+        PathBuf::from(subfolder)
+    } else {
+        mount_path.join(subfolder)
+    };
     let target_album_dir = albums_dir.join(&item.derived_album_name);
 
     if let Err(e) = fs::create_dir_all(&target_album_dir) {
@@ -75,14 +97,15 @@ pub fn relocate_media(
     let album_id = if let Some(existing) = albums.into_iter().find(|a| a.name == item.derived_album_name) {
         existing.id
     } else {
+        let rel_album_path = format!("{}/{}", subfolder, item.derived_album_name);
         let new_alb = db
-            .create_album(&item.derived_album_name, &item.derived_album_name, None)
+            .create_album(&item.derived_album_name, &rel_album_path, None)
             .map_err(|e| e.to_string())?;
         new_alb.id
     };
 
     let original_rel = item.relative_path.to_string_lossy().to_string();
-    let current_rel = format!("{}/{}", item.derived_album_name, final_filename);
+    let current_rel = format!("{}/{}/{}", subfolder, item.derived_album_name, final_filename);
     let file_hash = format!("{}_{}", item.file_size, original_filename);
 
     let new_media = NewMediaItem {
@@ -109,26 +132,21 @@ pub fn relocate_media(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_resolve_collision() {
-        let temp_dir = std::env::temp_dir().join(format!("test_collision_{}", std::process::id()));
-        let _ = fs::create_dir_all(&temp_dir);
+        let dir = tempdir().unwrap();
+        let f1 = dir.path().join("photo.jpg");
+        fs::write(&f1, b"first").unwrap();
 
-        // First file doesn't exist
-        let (p1, n1) = resolve_collision(&temp_dir, "photo.jpg");
-        assert_eq!(n1, "photo.jpg");
-        fs::write(&p1, b"first").unwrap();
+        let (path2, name2) = resolve_collision(dir.path(), "photo.jpg");
+        assert_eq!(name2, "photo_1.jpg");
+        assert_eq!(path2, dir.path().join("photo_1.jpg"));
 
-        // Second file collisions with photo.jpg -> photo_1.jpg
-        let (p2, n2) = resolve_collision(&temp_dir, "photo.jpg");
-        assert_eq!(n2, "photo_1.jpg");
-        fs::write(&p2, b"second").unwrap();
-
-        // Third file collisions with photo.jpg -> photo_2.jpg
-        let (_p3, n3) = resolve_collision(&temp_dir, "photo.jpg");
-        assert_eq!(n3, "photo_2.jpg");
-
-        let _ = fs::remove_dir_all(&temp_dir);
+        fs::write(&path2, b"second").unwrap();
+        let (path3, name3) = resolve_collision(dir.path(), "photo.jpg");
+        assert_eq!(name3, "photo_2.jpg");
+        assert_eq!(path3, dir.path().join("photo_2.jpg"));
     }
 }
